@@ -1,0 +1,8 @@
+# Session scratch and handoff material — the `ig.` prefix marks files that are
+# inputs to an agent session, never repository content.
+ig.*
+.ig.*
+
+# OS / editor noise
+.DS_Store
+*.code-workspace
