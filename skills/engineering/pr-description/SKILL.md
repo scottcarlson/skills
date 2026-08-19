@@ -1,6 +1,6 @@
 ---
 name: pr-description
-description: Write (or rewrite) a scannable, emoji'd description for an existing GitHub PR — drawing on this session's own memory of the work when it did the work, otherwise deriving intent fresh from the diff/commits, optionally sharpened by a JIRA ticket (Figma/Notion links included), and enriched with screenshots from a local dev server or Figma when available. Checks the repo's CLAUDE.md/CLAUDE.local.md/AGENTS.md for conventions on running the app and taking screenshots. Callable directly or from another skill's own instructions. Invoke with a PR id (`#123`, `PR-123`, `PR123`, a number, or a PR URL), optionally a JIRA id (`PSD-123`), and optionally a free-text context note in quotes.
+description: Write (or rewrite) a scannable, emoji'd description for an existing GitHub PR — drawing on this session's own memory of the work when it did the work, otherwise deriving intent fresh from the diff/commits, optionally sharpened by a JIRA ticket (Figma/Notion links included), and enriched with screenshots from a local dev server or Figma when available. Checks the repo's CLAUDE.md/CLAUDE.local.md/AGENTS.md for conventions on running the app and taking screenshots. Callable directly or from another skill's own instructions. Invoke with a PR id (`#123`, `PR-123`, `PR123`, a number, or a PR URL), optionally a JIRA id (`ABC-123`), and optionally a free-text context note in quotes.
 disable-model-invocation: true
 ---
 
@@ -17,7 +17,7 @@ This edits an existing PR's description — team-visible, and it overwrites what
 ### 1. Parse the arguments
 
 - **PR id** (required): `#123`, `PR123`, `PR-123`, a bare `123`, or a full `github.com/.../pull/123` URL. Normalize to the bare number. If a URL was given and it points to a different repo than the current directory's remote, target that repo explicitly (`-R owner/repo`) on every `gh` call below rather than assuming the local remote.
-- **JIRA id** (optional): scan the remaining tokens for one shaped like `PSD-123`. If found, it sharpens the write-up (step 3); if absent, skip step 3 — describe the PR on its own merits.
+- **JIRA id** (optional): scan the remaining tokens for one shaped like `ABC-123`. If found, it sharpens the write-up (step 3); if absent, skip step 3 — describe the PR on its own merits.
 - **Context note** (optional): whatever text is left after pulling out the PR id and JIRA id, quotes stripped. Treat it as a standing instruction layered on top of the defaults below — e.g. "the dev server's running, include screenshots," "keep it short," "don't mention the migration, that's a separate PR." Re-check it at every step below rather than reading it once and forgetting it.
 
 If the PR id is missing, ask before doing anything else.

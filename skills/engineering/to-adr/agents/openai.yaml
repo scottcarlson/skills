@@ -1,0 +1,5 @@
+interface:
+  display_name: "To ADR"
+  short_description: "Commit this session's decisions as ADRs before a reset"
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,5 @@
+interface:
+  display_name: "PR Review"
+  short_description: "Review a PR, fix it, and open a follow-up PR"
+policy:
+  allow_implicit_invocation: false

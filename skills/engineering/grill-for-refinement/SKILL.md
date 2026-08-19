@@ -1,13 +1,13 @@
 ---
 name: grill-for-refinement
-description: Grill a single JIRA ticket to get it refinement-ready. Fetches the ticket live via the Atlassian MCP, pulls in any linked Figma/Notion/Google Docs context, then interviews you one question at a time with a refinement lens (acceptance criteria, edge cases, scope, dependencies, definition of done) rather than an implementation lens. Drafts one comment splitting what you answered from what the team needs to discuss, and posts it to the ticket once you confirm. Invoke with a ticket id, e.g. `/grill-for-refinement PSD-123`.
+description: Sharpen a single JIRA ticket to refinement-ready. Interviews you with a refinement lens — acceptance criteria, edge cases, scope, definition of done — rather than an implementation lens, then drafts a summary comment and posts it once you confirm. Invoke with a ticket id, e.g. `/grill-for-refinement ABC-123`.
 ---
 
 # Grill for Refinement
 
 Interview me about a single JIRA ticket to sharpen it before a team refinement meeting — purely ephemeral, no local files: fetch live, grill, draft a comment, post on confirmation.
 
-The argument is a JIRA ticket id (e.g. `PSD-123`). If it's missing from the invocation, ask me for it before doing anything else.
+The argument is a JIRA ticket id (e.g. `ABC-123`). If it's missing from the invocation, ask me for it before doing anything else.
 
 ## Process
 
@@ -29,7 +29,9 @@ Best-effort only: if a link 404s or access is denied, note that in your own cont
 
 ### 3. Grill — refinement lens, not implementation
 
-Run the interview using `/grilling`'s mechanics: **one question at a time**, offer your recommended answer, wait for my response before continuing.
+Call the Skill tool with `"grilling"` and run the interview by its mechanics. Don't restate them here — whatever version is installed defines how the interview runs, and this skill should never need re-syncing when that changes.
+
+This skill owns the **lens**, not the mechanics.
 
 Keep questions scoped to **refinement**, not implementation — don't ask how something should be built in code unless the ticket itself explicitly raises a technical concern. Draw on whatever's actually thin on *this* ticket (informed by step 2's context) rather than working a canned checklist top to bottom. Typical refinement gaps to probe:
 

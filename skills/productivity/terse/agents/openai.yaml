@@ -1,0 +1,3 @@
+interface:
+  display_name: "Terse"
+  short_description: "Low-token communication mode"

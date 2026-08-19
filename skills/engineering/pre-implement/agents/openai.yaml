@@ -1,0 +1,5 @@
+interface:
+  display_name: "Pre-Implement"
+  short_description: "Pick the model and effort for one slice of work"
+policy:
+  allow_implicit_invocation: false

@@ -30,7 +30,7 @@ Match the existing files in `docs/adr/` for numbering, filename shape, and struc
 
 Also add any new domain terms to `CONTEXT.md` at the repo root.
 
-Invoke `/domain-modeling` to do the writing if it helps, but the gate is this skill's: nothing advances until the files exist.
+Call the Skill tool with `"domain-modeling"` to do the writing if it helps, but the gate is this skill's: nothing advances until the files exist.
 
 ### 4. Report and hand off
 

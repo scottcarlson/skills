@@ -1,6 +1,6 @@
 ---
 name: jira-intake
-description: Entry point for starting work on a new story, task, bug, or spike. Fans out one subagent per context source (JIRA ticket, Figma, images, notes) so raw payloads land on disk instead of in the main context window, then folds back a short brief and hands you the next command. Invoke with a JIRA ticket id, e.g. `/jira-intake PSD-123`.
+description: Entry point for starting work on a new story, task, bug, or spike. Fans out one subagent per context source (JIRA ticket, Figma, images, notes) so raw payloads land on disk instead of in the main context window, then folds back a short brief and hands you the next command. Invoke with a JIRA ticket id, e.g. `/jira-intake ABC-123`.
 disable-model-invocation: true
 ---
 
@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 Gather everything known about a JIRA ticket into a **short brief**, while the bulk — ticket export, Figma frames, screenshots, transcripts — stays on disk. This skill gathers and hands off. It does not plan, spec, or write code.
 
-The argument is a ticket id (e.g. `PSD-123`), optionally followed by **free-text framing** — often the sharpest steer for the whole effort. Treat the whole invoking message as the initiating prompt and give that framing first-class weight against the exported ticket.
+The argument is a ticket id (e.g. `ABC-123`), optionally followed by **free-text framing** — often the sharpest steer for the whole effort. Treat the whole invoking message as the initiating prompt and give that framing first-class weight against the exported ticket.
 
 ## The hard rule
 
@@ -22,7 +22,7 @@ Gathering, not deep reasoning — **medium** is right. If the active effort is n
 
 ### 1. Resolve the ticket id and directory
 
-The id is the token shaped like `PSD-123`. Use the upper-cased form for lookups, lower-cased for the directory. Look under `.ig.jira-tickets/` at the repo root for a child directory starting with `<id>-`:
+The id is the token shaped like `ABC-123`. Use the upper-cased form for lookups, lower-cased for the directory. Look under `.ig.jira-tickets/` at the repo root for a child directory starting with `<id>-`:
 
 - **One match** → that's it. **Several** → list them, ask. **None** → create `.ig.jira-tickets/<id>-<short-slug>/`.
 - **No id given** → list the child directories and ask which ticket. With no id and no context, skip to step 4.
@@ -41,6 +41,8 @@ Launch these in a **single message** so they run concurrently. Skip any whose so
 | `exhaustive-reasoner` | **Figma** — for each `figma.com` link, `get_design_context` / `get_screenshot` / `get_metadata` | `FIGMA-NOTES.md` | What the design actually specifies: layout, states, breakpoints, tokens, and anything that contradicts the ticket text |
 | `exhaustive-reasoner` | **Images** — before/after screenshots and mockups in the directory | `IMAGE-NOTES.md` | What each image shows and what it implies for implementation |
 | `general-purpose` | **Notes** — Slack exports, Meet transcripts, other markdown/text in the directory | `NOTES-DIGEST.md` | Decisions already made, constraints stated, open threads |
+
+`exhaustive-reasoner` is a locally defined subagent, not a built-in — `/setup-scott-carlson-skills` installs it. If it isn't available on this machine, use `general-purpose` for those two rows instead; the digests come back thinner but nothing breaks.
 
 The Figma link list comes from the ticket subagent, so the Figma subagent may need a second round once that returns — launch it then rather than guessing at links. Only use Figma's *writing* tools (or `/figma-use`) if the ticket actually asks you to push design back into Figma.
 

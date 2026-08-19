@@ -1,6 +1,6 @@
 ---
 name: pr-review
-description: Review an existing GitHub pull request — incorporating GitHub Copilot's review comments if it's run one, and optionally sharpened by a JIRA ticket's full context (Figma/Notion links included) — then open a follow-up PR back into it with fixes applied one-commit-per-change and a scannable, emoji'd description. Codex peer-reviews the review (including Copilot's findings) before anything gets written. Invoke with a PR id (`#123`, `PR-123`, `PR123`, a number, or a PR URL), optionally a JIRA ticket id (`PSD-123`), and optionally a free-text context note in quotes.
+description: Review an existing GitHub pull request — incorporating GitHub Copilot's review comments if it's run one, and optionally sharpened by a JIRA ticket's full context (Figma/Notion links included) — then open a follow-up PR back into it with fixes applied one-commit-per-change and a scannable, emoji'd description. Codex peer-reviews the review (including Copilot's findings) before anything gets written. Invoke with a PR id (`#123`, `PR-123`, `PR123`, a number, or a PR URL), optionally a JIRA ticket id (`ABC-123`), and optionally a free-text context note in quotes.
 disable-model-invocation: true
 ---
 
@@ -19,7 +19,7 @@ This is a full code-review-plus-implementation pass — run it underpowered and 
 ### 1. Parse the arguments
 
 - **PR id** (required): accept `#123`, `PR123`, `PR-123`, a bare `123`, or a full `github.com/.../pull/123` URL. Normalize to the bare number.
-- **JIRA id** (optional): a second token shaped like `PSD-123`. If present, this ticket sharpens the review; if absent, the PR is reviewed on its own merits — skip step 4 with no spec brief.
+- **JIRA id** (optional): a second token shaped like `ABC-123`. If present, this ticket sharpens the review; if absent, the PR is reviewed on its own merits — skip step 4 with no spec brief.
 - **Context note** (optional): whatever text is left after pulling out the PR id and JIRA id, quotes stripped. Treat it as a standing instruction layered on top of the defaults in every step below — e.g. "focus on the payment logic," "skip nice-to-haves," "don't touch the test files," "keep the description short." Re-check it at each step rather than reading it once and forgetting it; it can shape review scope (step 5), which categories you bother assigning (step 7), what you're willing to touch (step 8), and tone (step 10).
 
 If the PR id is missing or ambiguous, ask before doing anything else.
