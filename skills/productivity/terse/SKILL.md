@@ -7,6 +7,8 @@ description: >
   "lean mode", "keep it tight", "save tokens", or invokes /terse.
 ---
 
+*Why this skill exists, the failure it prevents, and when not to use it: [WHY.md](./WHY.md).*
+
 Answer tight. Full substance, no fluff. Real sentences, just stripped — not pidgin. Reader should never have to reparse.
 
 ## Persistence

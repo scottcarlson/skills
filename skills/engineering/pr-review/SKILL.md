@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 # PR Review → Fix → Follow-up PR
 
+*Why this skill exists, the failure it prevents, and when not to use it: [WHY.md](./WHY.md).*
+
 Takes an existing GitHub PR, reviews it (optionally sharpened by a JIRA ticket's full context), folds in GitHub Copilot's review comments, gets the combined findings peer-reviewed by Codex, then implements the survivors as one commit per change on a new branch and opens a follow-up PR **back into the original PR's branch** — with a description built to be skimmed in ten seconds, not read top to bottom.
 
 This creates branches, commits, pushes, and opens a PR — all team-visible, hard-to-reverse actions. Confirm with me before the push/PR-creation step (see step 8); never run this end-to-end unattended.

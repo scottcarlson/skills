@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 # PR Description
 
+*Why this skill exists, the failure it prevents, and when not to use it: [WHY.md](./WHY.md).*
+
 Turns an existing PR into a description people actually want to read: a punchy opener, a scannable summary (tables where a list has parallel shape, screenshots where visuals help), and the technical weeds tucked into a collapsible section underneath — not a wall of text up front.
 
 **Callable from another skill.** A calling skill (e.g. a work-completion or ticket-to-PR pipeline) can invoke this directly with its three inputs already resolved — PR id, JIRA id, context note — instead of parsing free text. Default behavior still ends by showing the draft and waiting for a go-ahead before posting (see step 7); a caller that owns its own confirmation moment can say so explicitly and receive just the drafted markdown instead.

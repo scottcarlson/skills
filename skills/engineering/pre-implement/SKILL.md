@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 # Pre-Implement
 
+*Why this skill exists, the failure it prevents, and when not to use it: [WHY.md](./WHY.md).*
+
 One job: **read one slice, name the minimum model and effort it needs, then get out of the way.** You do not plan it, explore for it, or start it.
 
 ## Process

@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 # To ADR
 
+*Why this skill exists, the failure it prevents, and when not to use it: [WHY.md](./WHY.md).*
+
 Land this session's decisions in `docs/adr/` **before the context that produced them is destroyed.**
 
 ## Why this runs now and not after a compact

@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 # JIRA Intake
 
+*Why this skill exists, the failure it prevents, and when not to use it: [WHY.md](./WHY.md).*
+
 Gather everything known about a JIRA ticket into a **short brief**, while the bulk — ticket export, Figma frames, screenshots, transcripts — stays on disk. This skill gathers and hands off. It does not plan, spec, or write code.
 
 The argument is a ticket id (e.g. `ABC-123`), optionally followed by **free-text framing** — often the sharpest steer for the whole effort. Treat the whole invoking message as the initiating prompt and give that framing first-class weight against the exported ticket.

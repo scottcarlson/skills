@@ -1,0 +1,5 @@
+interface:
+  display_name: "Setup Scott Carlson Skills"
+  short_description: "Check prerequisites and configure a machine for these skills"
+policy:
+  allow_implicit_invocation: false

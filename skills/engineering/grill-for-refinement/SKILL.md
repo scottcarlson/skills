@@ -5,6 +5,8 @@ description: Sharpen a single JIRA ticket to refinement-ready. Interviews you wi
 
 # Grill for Refinement
 
+*Why this skill exists, the failure it prevents, and when not to use it: [WHY.md](./WHY.md).*
+
 Interview me about a single JIRA ticket to sharpen it before a team refinement meeting — purely ephemeral, no local files: fetch live, grill, draft a comment, post on confirmation.
 
 The argument is a JIRA ticket id (e.g. `ABC-123`). If it's missing from the invocation, ask me for it before doing anything else.
