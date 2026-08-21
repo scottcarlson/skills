@@ -67,5 +67,10 @@ the sidecar's `policy.allow_implicit_invocation: false`, user-invoked skills aut
 node scripts/validate-skills.mjs
 ```
 
-`scripts/link-skills.sh` symlinks the repo's skills into `~/.claude/skills` and `~/.agents/skills`
-for authoring. It is not an installer.
+`scripts/sync-skills.sh` copies the repo's skills into `~/.agents/skills` and links them into
+`~/.claude/skills` for authoring. Run it after every edit, then restart your session. It is not
+an installer.
+
+Do **not** symlink a per-agent skill directory straight at this repo. Skill discovery does not
+reliably follow a symlink that resolves outside the canonical skills tree, and the skills vanish
+from a fresh session with no error.

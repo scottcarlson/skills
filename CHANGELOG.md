@@ -18,3 +18,11 @@ for them.
 - `pr-review` — review, fix, and open a follow-up PR, with Codex peer-reviewing the review
 - `terse` — low-token communication mode; the load-bearing primitive for the whole set
 - `setup-scott-carlson-skills` — check prerequisites, install subagents, scaffold repo config
+
+## 2026-08-21
+
+- Replaced `scripts/link-skills.sh` with `scripts/sync-skills.sh`. The old script symlinked the
+  per-agent skill directories straight at this repo, which made every linked skill disappear from
+  fresh sessions — skill discovery does not reliably follow a symlink resolving outside the
+  canonical skills tree, and it fails silently. The new script copies into `~/.agents/skills`
+  instead, reproducing what the installer writes.

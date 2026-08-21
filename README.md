@@ -154,7 +154,7 @@ and [`docs/adr/`](./docs/adr/) the reasoning behind the repo's shape.
 
 ```bash
 node scripts/validate-skills.mjs   # run before committing
-./scripts/link-skills.sh           # symlink skills into ~/.claude and ~/.agents for authoring
+./scripts/sync-skills.sh          # copy skills into ~/.agents and link them for authoring
 ```
 
 ## Credit
