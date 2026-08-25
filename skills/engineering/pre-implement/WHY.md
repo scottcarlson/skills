@@ -23,7 +23,7 @@ leaked somewhere earlier.
 
 ## Its output is ephemeral on purpose
 
-Four lines: which model, which effort, `/clear`, then `implement "GitHub issue #<N>"`. It advises a human
+Four lines: which model, which effort, `/clear`, then `/implement "GitHub issue #<N>"`. It advises a human
 immediately before a reset, so nothing needs to persist. Writing a file would only create something
 to go stale.
 

@@ -51,7 +51,7 @@ preference — exists because the polite version got rationalised away in the mo
    │  /where-am-i [spec#]   ← here.   Which slice, and what's HITL.    │
    │  /pre-implement <N>    ← here.   Model + effort.                  │
    │  /clear                                                           │
-   │  implement "GitHub issue #<N>"   ← mattpocock/skills.             │
+   │  /implement "GitHub issue #<N>"   ← mattpocock/skills.            │
    │  /clear                                                           │
    │  /code-review          ← mattpocock/skills.                       │
    └───────────────────────────────────────────────────────────────────┘
