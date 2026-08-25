@@ -1,7 +1,6 @@
 ---
 name: pr-description
 description: Write (or rewrite) a scannable, emoji'd description for an existing GitHub PR — drawing on this session's own memory of the work when it did the work, otherwise deriving intent fresh from the diff/commits, optionally sharpened by a JIRA ticket (Figma/Notion links included), and enriched with screenshots from a local dev server or Figma when available. Checks the repo's CLAUDE.md/CLAUDE.local.md/AGENTS.md for conventions on running the app and taking screenshots. Callable directly or from another skill's own instructions. Invoke with a PR id (`#123`, `PR-123`, `PR123`, a number, or a PR URL), optionally a JIRA id (`ABC-123`), and optionally a free-text context note in quotes.
-disable-model-invocation: true
 ---
 
 # PR Description
