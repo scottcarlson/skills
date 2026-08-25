@@ -53,3 +53,8 @@ it's pure overhead.
 
 Entry point. Hands off to `/compact`, then `grill-with-docs` for one coherent feature, or
 `wayfinder` when the work won't fit a single session.
+
+Its handoff also carries the standing reminder to write ADRs before that planning session resets —
+a job a dedicated `to-adr` skill used to own as a separate pipeline step. Folded in here instead:
+it's one line the model already needs to see at handoff time, and a whole extra skill for one line
+was more ceremony than the reminder was worth.

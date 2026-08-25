@@ -33,7 +33,6 @@ Required, and what needs each one:
 
 | Skill | Needed by | How it's used |
 | --- | --- | --- |
-| `domain-modeling` | `to-adr` | Called directly via the Skill tool. Hard dependency. |
 | `grilling` | `grill-for-refinement` | Called directly via the Skill tool. Hard dependency. |
 | `grill-with-docs` | `jira-intake` | Named as the next command after intake — the common case. |
 | `wayfinder` | `jira-intake` | Named as the alternative when the work won't fit one session. |
