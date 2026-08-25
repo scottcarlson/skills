@@ -1,6 +1,6 @@
 # Scott Carlson's Skills
 
-Seven Claude Code skills for getting real work through a delivery pipeline without wrecking the
+Eight Claude Code skills for getting real work through a delivery pipeline without wrecking the
 context window on the way.
 
 They are **connective tissue around [Matt Pocock's skills](https://github.com/mattpocock/skills)**,
@@ -47,13 +47,14 @@ preference — exists because the polite version got rationalised away in the mo
         ▼
 /clear
         │
-   ┌────┴──────────── per unblocked slice ─────────────┐
-   │  /pre-implement <N>   ← here.   Model + effort.   │
-   │  /clear                                           │
-   │  /implement <N>       ← mattpocock/skills.        │
-   │  /clear                                           │
-   │  /code-review         ← mattpocock/skills.        │
-   └───────────────────────────────────────────────────┘
+   ┌────┴────────────────── per unblocked slice ───────────────────────┐
+   │  /where-am-i [spec#]   ← here.   Which slice, and what's HITL.    │
+   │  /pre-implement <N>    ← here.   Model + effort.                  │
+   │  /clear                                                           │
+   │  /implement "GitHub issue #<N>"   ← mattpocock/skills.            │
+   │  /clear                                                           │
+   │  /code-review          ← mattpocock/skills.                       │
+   └───────────────────────────────────────────────────────────────────┘
         ▼
 /pr-description   and/or   /pr-review  ← here.   Post-PR.
 ```
@@ -94,7 +95,7 @@ you've already spent the context.
 | [`mattpocock/skills`](https://github.com/mattpocock/skills) | all of it | `grill-for-refinement` breaks outright; the pipeline dead-ends at planning and at implementation |
 | Atlassian (Rovo) MCP | `jira-intake`, `grill-for-refinement` | those two can't run |
 | Figma MCP | `jira-intake`, `pr-description` | design context and Figma screenshots skipped; both still work |
-| `gh` CLI, authenticated | `pre-implement`, `pr-description`, `pr-review` | those three can't run |
+| `gh` CLI, authenticated | `where-am-i`, `pre-implement`, `pr-description`, `pr-review` | those four can't run |
 | Codex | `pr-review` | loses its peer-review step |
 | A Fable-capable plan | `exhaustive-reasoner` as shipped | `/setup-scott-carlson-skills` offers to rewrite it to Opus |
 
@@ -109,6 +110,7 @@ whether you want the skill at all.
 | Skill | What it's for | |
 | --- | --- | --- |
 | **`jira-intake`** | Entry point for new work. Fans out one subagent per context source so raw payload lands on disk instead of your context window, then hands you the next command — including the reminder to commit ADRs *before* a reset destroys the arguments behind them. | [why](./skills/engineering/jira-intake/WHY.md) |
+| **`where-am-i`** | Maps this repo's issues into done / blocked / ready-for-agent / ready-for-you, so you know what to run concurrently and what HITL work to take while agents churn. Read-only. | [why](./skills/engineering/where-am-i/WHY.md) |
 | **`pre-implement`** | Names the model and reasoning effort for one slice, from that slice alone. If the ticket can't be sized from its own text, that's the finding. | [why](./skills/engineering/pre-implement/WHY.md) |
 | **`grill-for-refinement`** | Sharpens a single ticket to refinement-ready with a refinement lens, not an implementation one. Drafts a comment; posts on your confirmation. | [why](./skills/engineering/grill-for-refinement/WHY.md) |
 | **`pr-description`** | Writes or rewrites a scannable description for an existing PR, using the session's own memory of the work when it did the work. | [why](./skills/engineering/pr-description/WHY.md) |

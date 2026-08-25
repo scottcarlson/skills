@@ -35,7 +35,7 @@ Go higher only if the slice itself is still under-determined — an unresolved t
 
 1. **Model + effort**, with a one-line why.
 2. **`/clear`** before starting. Non-negotiable: implementation must begin in a clean window.
-3. **`/implement <N>`** as the command to run in the new session.
+3. **`/implement "GitHub issue #<N>"`** as the command to run in the new session — spell out "GitHub issue" so it can't be mistaken for a JIRA ticket number; vertical slices live here, not in JIRA.
 4. Anything in the slice that looks **under-specified or mis-sliced**, if you found it in step 1.
 
 Then stop. Do not clear, and do not start implementing.

@@ -1,0 +1,5 @@
+interface:
+  display_name: "Where Am I"
+  short_description: "Map the tracker: done, blocked, ready for agent, ready for you"
+policy:
+  allow_implicit_invocation: false

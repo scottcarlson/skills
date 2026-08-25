@@ -46,7 +46,7 @@ Required, and what needs each one:
 | --- | --- | --- |
 | Atlassian (Rovo) MCP | `jira-intake`, `grill-for-refinement`; optional for the PR skills | Is `getJiraIssue` among your tools? |
 | Figma MCP | `jira-intake` design context; `pr-description` screenshots | Is `get_design_context` among your tools? |
-| `gh` CLI, authenticated | `pre-implement`, `pr-description`, `pr-review` | `gh auth status` |
+| `gh` CLI, authenticated | `where-am-i`, `pre-implement`, `pr-description`, `pr-review` | `gh auth status` |
 | Codex | `pr-review`'s peer-review step | Is a Codex integration available? |
 | A Fable-capable plan | `exhaustive-reasoner` as shipped | See section C. |
 
@@ -84,7 +84,7 @@ skills stop working and which degrade:
 - **No Atlassian MCP** → `jira-intake` and `grill-for-refinement` cannot run at all.
 - **No Figma MCP** → `jira-intake` skips design context; `pr-description` skips Figma screenshots.
   Both still work.
-- **No `gh`** → the two PR skills cannot run; `pre-implement` cannot read the issue.
+- **No `gh`** → the two PR skills cannot run; `pre-implement` cannot read the issue; `where-am-i` cannot read the tracker.
 - **No Codex** → `pr-review` loses its peer-review step. Say so and continue; don't silently skip it.
 
 This section installs nothing. It is a report, and the user decides what to fix.
