@@ -34,4 +34,4 @@ implementation has started means the decision was already made by default.
 
 ## Neighbours
 
-Runs per unblocked slice, after `to-adr` and a `/clear`. Hands off to `/clear`, then `implement`.
+Runs per unblocked slice, after `to-tickets` and a `/clear`. Hands off to `/clear`, then `implement`.

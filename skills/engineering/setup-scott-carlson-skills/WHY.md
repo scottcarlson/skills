@@ -17,14 +17,14 @@ deliver, and it exists because there is no other way to get them there.
 ## What it delivers, and why each matters
 
 **The dependency check.** These skills are connective tissue around Matt Pocock's skills, not a
-standalone suite. `to-adr` calls `domain-modeling`; `grill-for-refinement` calls `grilling`;
-`jira-intake` and `pre-implement` hand off to `grill-with-docs`, `wayfinder`, `to-spec`, `to-tickets`,
-and `implement`. Install these alone and the pipeline dead-ends at the first handoff — silently,
-mid-session, after you've already spent the context. The check moves that failure to install time.
+standalone suite. `grill-for-refinement` calls `grilling`; `jira-intake` and `pre-implement` hand off
+to `grill-with-docs`, `wayfinder`, `to-spec`, `to-tickets`, and `implement`. Install these alone and
+the pipeline dead-ends at the first handoff — silently, mid-session, after you've already spent the
+context. The check moves that failure to install time.
 
-There's a trap it exists to avoid: four of those skills are user-invoked, so they're **hidden from the
-skill list even when correctly installed**. Checking the list rather than the filesystem reports them
-missing when they're present.
+There's a trap it exists to avoid: several of those skills are user-invoked, so they're **hidden from
+the skill list even when correctly installed**. Checking the list rather than the filesystem reports
+them missing when they're present.
 
 **The subagent definitions.** `jira-intake` dispatches to `exhaustive-reasoner`. Without a definition,
 that's a failed dispatch. And `exhaustive-reasoner` ships as `model: fable` — on a plan without Fable

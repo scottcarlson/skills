@@ -56,7 +56,7 @@ Produce a **concise context brief** (aim for under 30 lines) from the digests: w
 
 Note where the detail lives (`TICKET.md`, `FIGMA-NOTES.md`, …) so any later session can pull it on demand instead of re-fetching.
 
-### 5. Hand off — all three reminders, every time
+### 5. Hand off — all four reminders, every time
 
 End with exactly these, in order:
 
@@ -65,5 +65,9 @@ End with exactly these, in order:
 3. **Which planning skill**, with a one-line why:
    - **`/grill-with-docs`** — one coherent feature, bug, or spike that a single relentless interview can sharpen. **This is the common case; recommend it unless the ticket genuinely resists it.**
    - **`/wayfinder`** — too big to hold in one session, or carrying enough unknowns that it needs a map of decision tickets resolved one at a time.
+4. **Standing reminders for that planning session**, carried forward because nothing downstream restates them:
+   - **Write any missing ADRs before the next reset.** An ADR's value is the argument — the option rejected and why — and that's exactly what a reset destroys. Check `docs/adr/` on the filesystem for what already exists; write what's missing, matching the existing format.
+   - **Keep the interview on the code and the acceptance criteria** — not commit hygiene, review process, or other delivery mechanics. Those belong to later skills.
+   - **Don't produce logic code during planning.** That's `implement`'s job, after `to-tickets` has sliced the work.
 
 Then stop. Do not begin planning here.
