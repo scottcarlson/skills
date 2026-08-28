@@ -1,0 +1,5 @@
+interface:
+  display_name: "I'm Dumb"
+  short_description: "Re-explain the last answer in plain, friendly language"
+policy:
+  allow_implicit_invocation: false
