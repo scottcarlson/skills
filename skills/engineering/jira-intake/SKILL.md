@@ -56,7 +56,16 @@ Produce a **concise context brief** (aim for under 30 lines) from the digests: w
 
 Note where the detail lives (`TICKET.md`, `FIGMA-NOTES.md`, …) so any later session can pull it on demand instead of re-fetching.
 
-### 5. Hand off — all four reminders, every time
+### 5. Ask: continue here, or hand off to a fresh session?
+
+Before doing anything else, ask:
+
+> Continue in this session (`/compact` then plan here), or create a **handoff document** for a completely fresh session?
+
+- **Continue here** → go to step 6a.
+- **Handoff document** → go to step 6b.
+
+### 6a. Hand off — same session, all four reminders every time
 
 End with exactly these, in order:
 
@@ -71,3 +80,22 @@ End with exactly these, in order:
    - **Don't produce logic code during planning.** That's `implement`'s job, after `to-tickets` has sliced the work.
 
 Then stop. Do not begin planning here.
+
+### 6b. Hand off — fresh-session handoff document
+
+Write a detailed `HANDOFF.md` into the ticket directory (`.ig.jira-tickets/<id>-<slug>/` — never `/tmp` or any other scratch location; it must survive and be discoverable by a future session). Include:
+
+- The brief from step 4 in full, not summarized further.
+- The free-text framing from the initiating prompt, called out explicitly.
+- Which planning skill to run and why (same criteria as 6a.3): `/grill-with-docs` for one coherent effort, `/wayfinder` when it's too big or too unknown for one session.
+- Pointers to every digest on disk (`TICKET.md`, `FIGMA-NOTES.md`, `IMAGE-NOTES.md`, `NOTES-DIGEST.md`, `INITIAL-PROMPT.md`) — whichever exist — so the fresh session pulls detail on demand instead of re-fetching.
+- Open questions and gaps flagged during intake.
+- The same standing reminders as 6a.4 (ADRs, keep the interview on code/AC, don't produce logic code during planning), since nothing downstream restates them.
+
+Then give me a **ready-to-paste prompt for the new session**. It must:
+
+- Point at the handoff document's path and tell the new session to read it first.
+- Name the planning skill to invoke (`/grill-with-docs` or `/wayfinder`) and the ticket id.
+- Surface any additional context, nuance, or clarification from *this* conversation that didn't make it into `HANDOFF.md` or the digests — anything said in passing, any ambiguity I should resolve up front, anything the new session would otherwise have to ask me to repeat.
+
+Then stop. Do not begin planning here, and do not `/compact` — this session's job ends with the handoff document and the prompt.
