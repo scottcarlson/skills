@@ -33,6 +33,16 @@ The id is the token shaped like `ABC-123`. Use the upper-cased form for lookups,
 
 Write the full invoking message **verbatim** to `INITIAL-PROMPT.md` in the ticket directory. It exists to survive the `/compact` that follows this skill. If it already exists with materially different content, confirm before overwriting.
 
+### 2b. Pause — have me rename this session
+
+Stop here and wait. Print the exact command, with the real ticket id substituted, so I can copy and paste it:
+
+```
+/rename ABC-123 [INTAKE]
+```
+
+Use the upper-cased ticket id resolved in step 1 in place of `ABC-123`. Do not fan out until I confirm the rename is done (or tell you to skip it) — the point is that this session is identifiable *before* it fills up with intake.
+
 ### 3. Fan out — one subagent per source, in parallel
 
 Launch these in a **single message** so they run concurrently. Skip any whose source doesn't exist. Every prompt opens with: *"Invoke the `terse` skill. Report a digest of at most 10 lines — no preamble, no restatement of the task."*
@@ -65,7 +75,7 @@ Before doing anything else, ask:
 - **Continue here** → go to step 6a.
 - **Handoff document** → go to step 6b.
 
-### 6a. Hand off — same session, all four reminders every time
+### 6a. Hand off — same session, all five reminders every time
 
 End with exactly these, in order:
 
@@ -78,6 +88,11 @@ End with exactly these, in order:
    - **Write any missing ADRs before the next reset.** An ADR's value is the argument — the option rejected and why — and that's exactly what a reset destroys. Check `docs/adr/` on the filesystem for what already exists; write what's missing, matching the existing format.
    - **Keep the interview on the code and the acceptance criteria** — not commit hygiene, review process, or other delivery mechanics. Those belong to later skills.
    - **Don't produce logic code during planning.** That's `implement`'s job, after `to-tickets` has sliced the work.
+5. **Rename this session** — it is about to carry both phases. Print the command with the real ticket id substituted so I can copy and paste it:
+
+   ```
+   /rename ABC-123 [INTAKE + GRILLING]
+   ```
 
 Then stop. Do not begin planning here.
 
@@ -97,5 +112,13 @@ Then give me a **ready-to-paste prompt for the new session**. It must:
 - Point at the handoff document's path and tell the new session to read it first.
 - Name the planning skill to invoke (`/grill-with-docs` or `/wayfinder`) and the ticket id.
 - Surface any additional context, nuance, or clarification from *this* conversation that didn't make it into `HANDOFF.md` or the digests — anything said in passing, any ambiguity I should resolve up front, anything the new session would otherwise have to ask me to repeat.
+
+Finally, remind me to rename the **new** session once it opens, and print the command with the real ticket id substituted so I can copy and paste it:
+
+```
+/rename ABC-123 [GRILLING]
+```
+
+This session keeps its `[INTAKE]` name — the grilling happens elsewhere.
 
 Then stop. Do not begin planning here, and do not `/compact` — this session's job ends with the handoff document and the prompt.
