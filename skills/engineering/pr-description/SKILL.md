@@ -9,9 +9,9 @@ description: Write (or rewrite) a scannable, emoji'd description for an existing
 
 Turns an existing PR into a description people actually want to read: a punchy opener, a scannable summary (tables where a list has parallel shape, screenshots where visuals help), and the technical weeds tucked into a collapsible section underneath — not a wall of text up front.
 
-**Callable from another skill.** A calling skill (e.g. a work-completion or ticket-to-PR pipeline) can invoke this directly with its three inputs already resolved — PR id, JIRA id, context note — instead of parsing free text. Default behavior still ends by showing the draft and waiting for a go-ahead before posting (see step 7); a caller that owns its own confirmation moment can say so explicitly and receive just the drafted markdown instead.
+**Callable from another skill.** A calling skill (e.g. a work-completion or ticket-to-PR pipeline) can invoke this directly with its three inputs already resolved — PR id, JIRA id, context note — instead of parsing free text. It posts on its own (see step 7); a caller that wants the markdown handed back instead of posted can say so explicitly.
 
-This edits an existing PR's description — team-visible, and it overwrites whatever's there now. Confirm with me before step 7's `gh pr edit`.
+**Post without asking.** Invoking this skill *is* the go-ahead — do not stop to have the draft reviewed before `gh pr edit`. Write it, post it, then show me what went up. A PR description is cheap to revise and I would rather read it on GitHub than approve it in the terminal.
 
 ## Process
 
@@ -116,13 +116,13 @@ testing performed, rollout/migration notes. This is where the depth lives.
 - Figma: <link>
 ```
 
-**Stop here and show me** the full draft, plus a one-line note on anything from the current body you're preserving (step 2) and anything you skipped for lack of availability (screenshots, a why-section, etc.). Wait for my go-ahead — this overwrites a team-visible PR description.
-
-If this skill was invoked by another skill that said it owns confirmation itself, hand back the drafted markdown (and the staged media branch, if any) instead of stopping here — it will confirm and post on its own schedule.
-
-Once confirmed:
+**Post it — do not stop for review:**
 
 ```
 git push -u origin <media-branch>   # only if step 6 staged screenshots
 gh pr edit <num> --body-file <path>
 ```
+
+Then report, in a few lines: the PR link, anything from the current body you preserved (step 2), and anything you skipped for lack of availability (screenshots, a why-section, etc.). If something in the draft was a judgement call I might disagree with, name it — I can revise a posted description in seconds.
+
+If this skill was invoked by another skill that said it wants the draft handed back, hand back the drafted markdown (and the staged media branch, if any) instead of posting — it will post on its own schedule.
