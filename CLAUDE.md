@@ -20,7 +20,7 @@ Categories in use: `engineering`, `productivity`. Directory name **is** the skil
 
 **A skill that isn't ready to ship does not go in `skills/`.** There is no manifest; the installer
 finds skills by walking `skills/`, so placement is the only curation mechanism (ADR-0002). Put
-work-in-progress in a top-level `in-progress/` directory instead, and promote by moving it.
+work-in-progress in a top-level `experimental/` directory instead, and promote by moving it.
 
 Never move a shipped skill's directory. The installer records its path verbatim in a lockfile on
 every user's machine.

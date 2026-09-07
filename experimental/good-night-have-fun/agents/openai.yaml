@@ -1,0 +1,5 @@
+interface:
+  display_name: "Good Night, Have Fun"
+  short_description: "Work a spec's ready-for-agent tickets overnight and leave a PR behind"
+policy:
+  allow_implicit_invocation: false
