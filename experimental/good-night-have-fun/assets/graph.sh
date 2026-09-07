@@ -39,6 +39,9 @@ gh api "repos/$REPO/issues/$SPEC/timeline?per_page=100" --paginate \
 : > "$W/edges.txt"
 : > "$W/nodes.jsonl"
 placeholders=()
+skip_notparent=()
+skip_closed=()
+skip_notready=()
 
 while read -r n; do
   # `< /dev/null` is load-bearing: gh otherwise eats this loop's stdin and the
@@ -47,12 +50,20 @@ while read -r n; do
     --json number,title,state,labels,body < /dev/null > "$W/i$n.json" 2>/dev/null || continue
 
   # Two filters. `ready-for-agent` alone sweeps in unrelated issues elsewhere in
-  # the repo; the cross-reference alone sweeps in anything that mentions the spec.
-  jq -e --arg spec "$SPEC" \
-    '(.state == "OPEN")
-     and (.labels | map(.name) | index("ready-for-agent"))
-     and (.body | test("Spec: #" + $spec + "\\b"))' \
-    "$W/i$n.json" >/dev/null || continue
+  # the repo; the cross-reference alone sweeps in anything that mentions the
+  # spec — including its own sibling specs, which cross-reference each other.
+  #
+  # We look only inside the `## Parent` section, and match the spec number
+  # anywhere within it. The section's format varies by vintage of the ticket
+  # generator — `Spec: #356 · ADR 0017` and a bare `#27` are both in the wild —
+  # so anchoring on a `Spec:` prefix silently finds zero children on older
+  # repos, which is indistinguishable from "this spec has no work".
+  parent=$(jq -r '.body' "$W/i$n.json" | awk '/^## Parent/{f=1;next} /^## /{f=0} f')
+  printf '%s' "$parent" | grep -qE "#$SPEC\b" || { skip_notparent+=("$n"); continue; }
+
+  [ "$(jq -r '.state' "$W/i$n.json")" = "OPEN" ] || { skip_closed+=("$n"); continue; }
+  jq -e '.labels | map(.name) | index("ready-for-agent")' "$W/i$n.json" >/dev/null \
+    || { skip_notready+=("$n"); continue; }
 
   section=$(jq -r '.body' "$W/i$n.json" | awk '/^## Blocked by/{f=1;next} /^## /{f=0} f')
 
@@ -75,8 +86,24 @@ while read -r n; do
   done
 done < "$W/children.txt"
 
-[ -s "$W/nodes.jsonl" ] \
-  || fail "no open \`ready-for-agent\` children of #$SPEC declare \`Spec: #$SPEC\`."
+# Distinguish the reasons there is nothing to do. "No work" and "the work is
+# finished" and "this is a companion spec whose tickets hang off a sibling" are
+# three different situations, and a single generic message sends the user
+# looking in the wrong place.
+if [ ! -s "$W/nodes.jsonl" ]; then
+  msg="no runnable tickets found for #$SPEC."
+  [ ${#skip_closed[@]} -gt 0 ] \
+    && msg="$msg
+  ${#skip_closed[@]} child ticket(s) declare this spec but are CLOSED (${skip_closed[*]}) — this spec looks done."
+  [ ${#skip_notready[@]} -gt 0 ] \
+    && msg="$msg
+  ${#skip_notready[@]} open child ticket(s) lack the \`ready-for-agent\` label (${skip_notready[*]})."
+  [ ${#skip_notparent[@]} -gt 0 ] \
+    && msg="$msg
+  ${#skip_notparent[@]} cross-referenced issue(s) do not name #$SPEC in a '## Parent' section (${skip_notparent[*]}).
+  If this spec is one of several companions, its tickets may hang off a sibling spec instead — check those numbers."
+  fail "$msg"
+fi
 
 if [ ${#placeholders[@]} -gt 0 ]; then
   fail "unresolved template placeholders in '## Blocked by' on issue(s): ${placeholders[*]}.
@@ -84,14 +111,36 @@ if [ ${#placeholders[@]} -gt 0 ]; then
   graph cannot be trusted. Fix those issue bodies before running."
 fi
 
-# 3. Every edge must point at a node we actually collected.
+# 3. Classify every blocker that is not itself a runnable node in this graph.
+#
+#    A blocker outside the graph is not automatically an error. Specs are
+#    routinely half-finished, so the common case is a blocker that is CLOSED —
+#    already satisfied, and the edge should simply be dropped. Failing on those
+#    would refuse to run any spec that had been partly worked, which is most of
+#    them.
+: > "$W/edges_internal.txt"
+: > "$W/external_blocks.txt"
 while read -r from to; do
-  grep -q "\"number\":$from," "$W/nodes.jsonl" || grep -q "\"number\": *$from," "$W/nodes.jsonl" \
-    || fail "issue #$to is blocked by #$from, which is not an executable child of #$SPEC."
+  if grep -qE "\"number\": *$from," "$W/nodes.jsonl"; then
+    printf '%s %s\n' "$from" "$to" >> "$W/edges_internal.txt"
+    continue
+  fi
+  st=$(gh issue view "$from" -R "$REPO" --json state --jq '.state' < /dev/null 2>/dev/null) || st=""
+  case "$st" in
+    CLOSED)
+      : ;;                                        # satisfied; drop the edge
+    OPEN)
+      # A real, unsatisfied blocker that this run cannot execute — it is not a
+      # ready-for-agent child of this spec. The ticket is externally blocked.
+      # Record it and let the run prune that subtree; do not halt the night.
+      printf '%s %s\n' "$to" "$from" >> "$W/external_blocks.txt" ;;
+    *)
+      fail "issue #$to declares a blocker #$from that does not exist in $REPO." ;;
+  esac
 done < <(sort -u "$W/edges.txt")
+mv "$W/edges_internal.txt" "$W/edges.txt"
 
 # 4. Topological sort. tsort fails loudly on a cycle.
-awk '{print $1}' "$W/nodes.jsonl" >/dev/null
 jq -r '.number | "ROOT \(.)"' "$W/nodes.jsonl" > "$W/roots.txt"
 order=$(cat "$W/edges.txt" "$W/roots.txt" | tsort 2>"$W/tsort.err" | grep -v '^ROOT$') \
   || fail "the dependency graph contains a cycle: $(tr '\n' ' ' < "$W/tsort.err")"
@@ -123,9 +172,13 @@ jq -n \
   --argjson nodes "$(jq -s '.' "$W/nodes.jsonl")" \
   --argjson edges "$(awk '{printf "{\"blocks\":%s,\"blocked\":%s}\n", $2, $1}' "$W/edges.txt" | jq -s 'unique')" \
   --argjson order "$(printf '%s\n' "$order" | jq -R . | jq -s 'map(select(. != "") | tonumber)')" \
+  --argjson external "$(awk '{printf "{\"ticket\":%s,\"blocked_by\":%s}\n", $1, $2}' "$W/external_blocks.txt" | jq -s 'unique')" \
   --arg spec "$SPEC" --arg repo "$REPO" \
-  '{spec: ($spec|tonumber), repo: $repo, nodes: $nodes, edges: $edges, order: $order}' \
+  '{spec: ($spec|tonumber), repo: $repo, nodes: $nodes, edges: $edges,
+    order: $order, external_blocks: $external}' \
   > "$OUT/graph.json"
 
-printf 'graph.json written: %s node(s), %s edge(s)\n' \
-  "$(jq '.nodes | length' "$OUT/graph.json")" "$(jq '.edges | length' "$OUT/graph.json")"
+printf 'graph.json written: %s node(s), %s edge(s), %s externally blocked\n' \
+  "$(jq '.nodes | length' "$OUT/graph.json")" \
+  "$(jq '.edges | length' "$OUT/graph.json")" \
+  "$(jq '.external_blocks | length' "$OUT/graph.json")"

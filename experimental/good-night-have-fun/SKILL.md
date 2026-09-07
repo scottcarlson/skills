@@ -84,10 +84,16 @@ It **warns but does not fail** if `~/.agents/skills/implement/SKILL.md` or
 Run `assets/graph.sh <spec>`. Do not do this by hand and do not eyeball the output; the script is
 deterministic and you are not.
 
-It discovers children by **timeline cross-references on the spec, filtered to issues whose body
-declares `Spec: #<spec>`**. Both filters are required: cross-references alone catch any issue that
-merely mentions the spec, and the `ready-for-agent` label alone catches unrelated issues elsewhere
-in the repo.
+It discovers children by **timeline cross-references on the spec, filtered to issues that name the
+spec inside their own `## Parent` section.** Both filters are required: cross-references alone
+catch any issue that merely mentions the spec — including the spec's own sibling specs, which
+cross-reference each other — and the `ready-for-agent` label alone catches unrelated issues
+elsewhere in the repo.
+
+The `## Parent` section's format varies by vintage of the ticket generator: `Spec: #356 · ADR 0017`
+and a bare `#27` are both in the wild. Match the spec number **anywhere inside that section** and
+nowhere else. Anchoring on a `Spec:` prefix finds zero children on older repos, which is
+indistinguishable from "this spec has no work left".
 
 It parses each child's `## Blocked by` section into edges. Values are `- #<n>` lines, or a literal
 saying there are none.
@@ -99,7 +105,20 @@ saying there are none.
   and parsing it anyway produces a confident, wrong order in which cleanup tickets run before the
   work they clean up after. Name the affected issues and stop.
 - **A cycle.**
-- **An edge pointing at an issue that is not a child of this spec**, or does not exist.
+- **An edge pointing at an issue that does not exist.**
+
+A blocker that sits *outside* the graph is **not** an error, and this distinction matters because
+specs are routinely half-worked:
+
+- **Blocker is closed** → already satisfied. Drop the edge and carry on. Failing here would refuse
+  to run any spec that had been partly completed, which is most of them.
+- **Blocker is open but not a `ready-for-agent` child of this spec** → a genuine external block.
+  Record it, mark the ticket blocked, prune its subtree, and **keep going.**
+
+When nothing runnable is found, say *which* of these it was: all children closed (the spec is
+done), children open but unlabelled, or nothing declaring this spec as parent (it may be a
+companion spec whose tickets hang off a sibling). One generic "no tickets found" sends the user
+looking in the wrong place.
 - **A phase-tag contradiction.** Tickets carry a phase in their `## Parent` line — `**PR1**`,
   `**PR2**`, `**cleanup**`, and so on. Phase order and `## Blocked by` encode the same constraint
   from two angles, and they are written by hand independently. If an edge runs backwards against
