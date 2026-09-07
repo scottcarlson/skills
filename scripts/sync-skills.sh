@@ -15,10 +15,30 @@
 # at a repo checkout makes the skills silently vanish from a fresh session.
 # The copy reproduces exactly what the installer would have written.
 
+#
+# By default only skills/ is synced — that is the tree the installer ships, and
+# staged work deliberately stays out of it (ADR-0002). Pass --experimental to
+# also sync experimental/, which you need in order to test a staged skill at
+# all: an unsynced skill cannot be invoked, so there is no way to author one
+# without this.
+
 set -euo pipefail
+
+include_experimental=0
+for arg in "$@"; do
+  case "$arg" in
+    --experimental) include_experimental=1 ;;
+    -h|--help)
+      echo "usage: sync-skills.sh [--experimental]"
+      echo "  --experimental  also sync staged skills from experimental/"
+      exit 0 ;;
+    *) echo "unknown argument: $arg" >&2; exit 2 ;;
+  esac
+done
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 skills_root="${repo_root}/skills"
+experimental_root="${repo_root}/experimental"
 canonical="${HOME}/.agents/skills"
 agent_dirs=("${HOME}/.claude/skills")
 
@@ -67,7 +87,21 @@ while IFS= read -r skill_md; do
     fi
     ln -sfn "../../.agents/skills/${skill_name}" "${link_path}"
   done
-done < <(find "${skills_root}" -mindepth 3 -maxdepth 3 -type f -name "SKILL.md")
+done < <(
+  # skills/<category>/<name>/SKILL.md
+  find "${skills_root}" -mindepth 3 -maxdepth 3 -type f -name "SKILL.md"
+  # experimental/<name>/SKILL.md — no category level; staging is flat.
+  if [[ "${include_experimental}" -eq 1 && -d "${experimental_root}" ]]; then
+    find "${experimental_root}" -mindepth 2 -maxdepth 2 -type f -name "SKILL.md"
+  fi
+)
 
 echo ""
 echo "Summary: ${synced} synced. Restart your session to pick up changes."
+if [[ "${include_experimental}" -eq 0 && -d "${experimental_root}" ]]; then
+  staged="$(find "${experimental_root}" -mindepth 2 -maxdepth 2 -type f -name "SKILL.md" | wc -l | tr -d ' ')"
+  if [[ "${staged}" -gt 0 ]]; then
+    echo "Note: ${staged} staged skill(s) in experimental/ were NOT synced."
+    echo "      Re-run with --experimental to test them locally."
+  fi
+fi

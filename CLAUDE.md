@@ -71,6 +71,9 @@ node scripts/validate-skills.mjs
 `~/.claude/skills` for authoring. Run it after every edit, then restart your session. It is not
 an installer.
 
+By default it syncs only `skills/`. Pass `--experimental` to also sync staged skills from
+`experimental/` — you need that to test one, since an unsynced skill cannot be invoked at all.
+
 Do **not** symlink a per-agent skill directory straight at this repo. Skill discovery does not
 reliably follow a symlink that resolves outside the canonical skills tree, and the skills vanish
 from a fresh session with no error.
