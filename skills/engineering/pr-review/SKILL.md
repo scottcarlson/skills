@@ -91,7 +91,7 @@ gh api repos/{owner}/{repo}/pulls/<num>/comments --paginate
 gh api repos/{owner}/{repo}/pulls/<num>/reviews
 ```
 
-Filter both to the Copilot bot's entries. For each Copilot comment, do your own sanity check before it joins the pile — read the referenced hunk yourself and form an independent view of whether it's right, overstated, or off-base. Add it to the combined findings list as its own entry, tagged `source: copilot`, alongside your `source: standards`/`source: spec` findings from step 5. Note your own preliminary verdict on each — this isn't the final word (Codex checks it too in step 7), but don't forward a Copilot comment you already think is wrong without flagging that.
+Filter both to the Copilot bot's entries. Record each inline comment's numeric `id` (and `path`/`line`) — step 9 replies to it by id. Review-level bodies from `/reviews` have no thread to reply to; track them by review `id` instead. For each Copilot comment, do your own sanity check before it joins the pile — read the referenced hunk yourself and form an independent view of whether it's right, overstated, or off-base. Add it to the combined findings list as its own entry, tagged `source: copilot`, alongside your `source: standards`/`source: spec` findings from step 5. Note your own preliminary verdict on each — this isn't the final word (Codex checks it too in step 7), but don't forward a Copilot comment you already think is wrong without flagging that.
 
 Completion: one combined findings list, every entry tagged with its source (`standards`, `spec`, or `copilot`) and your preliminary take on the Copilot-sourced ones.
 
@@ -115,7 +115,9 @@ While reconciling, also assign each surviving finding a **category** — this is
 
 Collapse or rename these freely (e.g. skip Performance if nothing qualifies, or add a Testing category if gaps turned up) — the goal is categories that actually earn their keep for *this* PR, not a checklist to fill.
 
-Completion: a final, reconciled list of findings you're actually going to fix, each tagged by source **and** category, with a one-line note on why it survived (or why you or Codex overrode it).
+For every Copilot comment that does **not** survive (dropped, or folded into another finding), keep a one-line **reason** written for the PR author — step 9 posts it as a reply. Copilot comments that survive map to the commit that fixes them.
+
+Completion: a final, reconciled list of findings you're actually going to fix, each tagged by source **and** category, with a one-line note on why it survived (or why you or Codex overrode it) — plus a **disposition for every Copilot comment**: fixed (commit SHA) or not acted on (reason).
 
 ### 8. Implement the fixes — one commit per change
 
@@ -125,7 +127,7 @@ Completion: `git log origin/<baseRefName>..HEAD --oneline` shows exactly one com
 
 ### 9. Confirm, then push and open the follow-up PR
 
-**Stop here and show me:** the commit list from step 8, and the drafted PR description (step 10). Wait for my go-ahead before pushing or opening anything — this is the team-visible, hard-to-reverse step.
+**Stop here and show me:** the commit list from step 8, the drafted PR description (step 10), and the drafted Copilot replies (one line per comment: comment id → reply text). Wait for my go-ahead before pushing or opening anything — this is the team-visible, hard-to-reverse step.
 
 Once confirmed:
 
@@ -134,7 +136,21 @@ git push -u origin review/pr-<num>
 gh pr create --base <headRefName> --head review/pr-<num> --title "<title>" --body-file <path>
 ```
 
-**Fork caveat:** if step 2 flagged the original PR as coming from a fork you don't have push access to, `git push` here will fail. Tell me and offer the fallback: post the findings and diff as a **comment on the original PR** (`gh pr comment <num> --body-file <path>`) instead of a follow-up PR.
+Then reply to Copilot on the original PR (see below) — this needs the follow-up PR's URL, so it comes after `gh pr create`.
+
+**Reply to every Copilot comment on the original PR.** Whether or not a comment led to a change, leave a reply on its thread, so the author can resolve each thread when the follow-up PR merges. Never resolve threads yourself, and never skip a comment because you disagreed with it — the reply is where that disagreement is explained.
+
+```
+gh api repos/{owner}/{repo}/pulls/<num>/comments/<comment-id>/replies -f body="<reply>"
+```
+
+- **Acted on:** `Fixed in <follow-up PR URL> (<short SHA>) — <one line on what changed>.`
+- **Not acted on:** `Not changing this — <specific reason>. See <follow-up PR URL> for the full review.` The reason must be concrete (e.g. "the guard already exists in `foo()` on line 40", "intentional per the ticket's AC 3", "Codex and I both read this as style-only and out of scope"), never just "disagree" or "won't fix".
+- **Review-level Copilot bodies** with no inline thread: fold them into a single `gh pr comment <num>` summarizing which points were fixed and which weren't, with reasons.
+
+Reply to the original comment's id, not to a reply in the thread. Verify afterwards that every recorded Copilot comment id has a reply from you (`gh api repos/{owner}/{repo}/pulls/<num>/comments --paginate`), and report any that failed.
+
+**Fork caveat:** if step 2 flagged the original PR as coming from a fork you don't have push access to, `git push` here will fail. Tell me and offer the fallback: post the findings and diff as a **comment on the original PR** (`gh pr comment <num> --body-file <path>`) instead of a follow-up PR. Copilot replies still go out on the original PR, but link the comment rather than a follow-up PR URL and say fixes weren't pushed.
 
 ### 10. Write the follow-up PR description
 
@@ -177,4 +193,4 @@ One or two lines: what Codex flagged, what got kept vs. dropped as a result — 
 - JIRA: <id> (omit this line if none was given)
 ```
 
-One category section per category that survived step 7, in severity order, each holding its bullets in commit order. Omit any category with nothing in it — don't print an empty "Performance" section for symmetry. Mark Copilot-sourced bullets with the 🤖 *(from Copilot's review)* tag so credit is visible at a glance regardless of which category they landed in. Keep each top-level bullet to one line; everything technical (diff snippets, reasoning, alternatives considered) goes inside its `<details>` dropdown so the description reads as a scannable list first, deep-dive second.
+One category section per category that survived step 7, in severity order, each holding its bullets in commit order. Omit any category with nothing in it — don't print an empty "Performance" section for symmetry. Copilot comments you didn't act on don't get a bullet here — they're answered on the original PR's threads. Mark Copilot-sourced bullets with the 🤖 *(from Copilot's review)* tag so credit is visible at a glance regardless of which category they landed in. Keep each top-level bullet to one line; everything technical (diff snippets, reasoning, alternatives considered) goes inside its `<details>` dropdown so the description reads as a scannable list first, deep-dive second.
