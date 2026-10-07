@@ -27,12 +27,16 @@ One commit per change, in a new PR targeting the original — not force-pushed o
 The author keeps the ability to read each fix in isolation, take some and reject others, and see what
 changed since they last looked. Rewriting their history to "help" removes all of that.
 
+Every Copilot comment on the original PR gets a reply — a fix link if acted on, a concrete reason if
+not. The author resolves threads when the follow-up merges; an unanswered thread leaves them guessing
+whether it was seen, ignored, or missed.
+
 The description is structured (critical / architectural / cleanup / peer-reviewed / context) because a
 flat list of fifteen fixes gets skimmed and merged, which defeats the point of reviewing.
 
 ## Constraints it obeys
 
-**Confirms before opening the PR.** It's team-visible and it's someone else's branch.
+**Confirms before opening the PR or replying.** Both are team-visible and it's someone else's branch.
 
 ## When not to use it
 
