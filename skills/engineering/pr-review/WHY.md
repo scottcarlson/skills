@@ -21,6 +21,11 @@ findings and the code.
 
 Only then does anything get implemented.
 
+**Fable is a fallback, not a peer.** If Codex is unreachable or out of credits, the `exhaustive-reasoner`
+subagent (Fable) stands in so the adversarial pass isn't silently skipped. It is deliberately gated to
+real unavailability: Codex is the reviewer of choice because it's a different model family, and
+swapping in a same-vendor reviewer whenever convenient would quietly erode that independence.
+
 ## Why fixes land as a follow-up PR
 
 One commit per change, in a new PR targeting the original — not force-pushed over someone's branch.
