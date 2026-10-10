@@ -1,6 +1,6 @@
 ---
 name: pr-review
-description: Review an existing GitHub pull request — incorporating GitHub Copilot's review comments if it's run one, and optionally sharpened by a JIRA ticket's full context (Figma/Notion links included) — then open a follow-up PR back into it with fixes applied one-commit-per-change and a scannable, emoji'd description. Codex peer-reviews the review (including Copilot's findings) before anything gets written. Invoke with a PR id (`#123`, `PR-123`, `PR123`, a number, or a PR URL), optionally a JIRA ticket id (`ABC-123`), and optionally a free-text context note in quotes.
+description: Review an existing GitHub pull request — incorporating GitHub Copilot's review comments if it's run one, and optionally sharpened by a JIRA ticket's full context (Figma/Notion links included) — then open a follow-up PR back into it with fixes applied one-commit-per-change and a scannable, emoji'd description. Codex peer-reviews the review (including Copilot's findings) before anything gets written — or Fable, via the `exhaustive-reasoner` subagent, only if Codex is unavailable. Invoke with a PR id (`#123`, `PR-123`, `PR123`, a number, or a PR URL), optionally a JIRA ticket id (`ABC-123`), and optionally a free-text context note in quotes.
 disable-model-invocation: true
 ---
 
@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 *Why this skill exists, the failure it prevents, and when not to use it: [WHY.md](./WHY.md).*
 
-Takes an existing GitHub PR, reviews it (optionally sharpened by a JIRA ticket's full context), folds in GitHub Copilot's review comments, gets the combined findings peer-reviewed by Codex, then implements the survivors as one commit per change on a new branch and opens a follow-up PR **back into the original PR's branch** — with a description built to be skimmed in ten seconds, not read top to bottom.
+Takes an existing GitHub PR, reviews it (optionally sharpened by a JIRA ticket's full context), folds in GitHub Copilot's review comments, gets the combined findings peer-reviewed by Codex (Fable only as a fallback), then implements the survivors as one commit per change on a new branch and opens a follow-up PR **back into the original PR's branch** — with a description built to be skimmed in ten seconds, not read top to bottom.
 
 This creates branches, commits, pushes, and opens a PR — all team-visible, hard-to-reverse actions. Confirm with me before the push/PR-creation step (see step 8); never run this end-to-end unattended.
 
@@ -95,7 +95,7 @@ Filter both to the Copilot bot's entries. Record each inline comment's numeric `
 
 Completion: one combined findings list, every entry tagged with its source (`standards`, `spec`, or `copilot`) and your preliminary take on the Copilot-sourced ones.
 
-### 7. Have Codex peer-review the combined findings
+### 7. Have a peer review the combined findings (Codex; Fable only as fallback)
 
 Before acting on anything from steps 5–6, get an independent read on the *entire* combined list — your own findings and Copilot's — this catches false positives and blind spots before they become commits. Send Codex (`codex:codex-rescue`) the full list plus the diff and ask it to:
 
@@ -103,7 +103,14 @@ Before acting on anything from steps 5–6, get an independent read on the *enti
 - flag anything real it thinks was missed;
 - give a one-line verdict per finding: keep, drop, or modify.
 
-Reconcile: for each finding, if Codex disputes it, weigh its reasoning against your own (and, for Copilot findings, your step-6 preliminary take) and decide — you're the final judge, not a pass-through, on every source including Copilot's. Keep code, identifiers, and the finding list itself full-fidelity in Codex's response; only the surrounding commentary should be caveman-terse (per the low-token delegation contract other skills here use).
+**Fallback — only when Codex genuinely can't do the job.** Codex is always the first choice. Switch to Fable only if one of these holds:
+
+- Codex is unreachable (plugin missing, errors out, times out) and one reasonable retry or fix doesn't resolve it; or
+- Codex reports it's out of credits / has hit its usage limit, and the limit hasn't reset.
+
+Not triggers: Codex being slow, returning findings you disagree with, or you preferring Fable. If Codex answered, use its answer. When falling back, spawn the `exhaustive-reasoner` subagent (Fable) as the independent senior peer reviewer, opening its prompt by telling it to invoke the `terse` skill, and give it the same brief — full findings list, the diff, and the same three asks above. It must review independently, not rubber-stamp. Tell the user in one line that Codex was unavailable (and why) and that Fable stood in. Throughout the rest of this skill, "Codex" means whichever reviewer actually ran.
+
+Reconcile: for each finding, if the peer reviewer (Codex, or Fable on fallback) disputes it, weigh its reasoning against your own (and, for Copilot findings, your step-6 preliminary take) and decide — you're the final judge, not a pass-through, on every source including Copilot's. Keep code, identifiers, and the finding list itself full-fidelity in the reviewer's response; only the surrounding commentary should be caveman-terse (per the low-token delegation contract other skills here use).
 
 While reconciling, also assign each surviving finding a **category** — this is what lets me and other reviewers tell a must-fix from a nice-to-have at a glance, and group cherry-picks by concern. Don't force a fixed taxonomy; pick categories that fit what actually turned up, but always keep hard-blockers separate from optional polish and break out anything that reshapes structure rather than patches a spot. A set that usually covers it:
 
@@ -145,7 +152,7 @@ gh api repos/{owner}/{repo}/pulls/<num>/comments/<comment-id>/replies -f body="<
 ```
 
 - **Acted on:** `Fixed in <follow-up PR URL> (<short SHA>) — <one line on what changed>.`
-- **Not acted on:** `Not changing this — <specific reason>. See <follow-up PR URL> for the full review.` The reason must be concrete (e.g. "the guard already exists in `foo()` on line 40", "intentional per the ticket's AC 3", "Codex and I both read this as style-only and out of scope"), never just "disagree" or "won't fix".
+- **Not acted on:** `Not changing this — <specific reason>. See <follow-up PR URL> for the full review.` The reason must be concrete (e.g. "the guard already exists in `foo()` on line 40", "intentional per the ticket's AC 3", "the peer reviewer and I both read this as style-only and out of scope"), never just "disagree" or "won't fix".
 - **Review-level Copilot bodies** with no inline thread: fold them into a single `gh pr comment <num>` summarizing which points were fixed and which weren't, with reasons.
 
 Reply to the original comment's id, not to a reply in the thread. Verify afterwards that every recorded Copilot comment id has a reply from you (`gh api repos/{owner}/{repo}/pulls/<num>/comments --paginate`), and report any that failed.
@@ -185,8 +192,8 @@ One or two sentences: what this PR reviewed and the overall take — call out up
 
   </details>
 
-### 🤝 Peer-reviewed by Codex
-One or two lines: what Codex flagged, what got kept vs. dropped as a result — across your findings and Copilot's.
+### 🤝 Peer-reviewed by <Codex | Fable>
+Name the reviewer that actually ran (Fable only if Codex was unavailable, with a few words on why). One or two lines: what they flagged, what got kept vs. dropped as a result — across your findings and Copilot's.
 
 ### 📋 Context
 - Original PR: #<num>
