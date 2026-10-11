@@ -20,7 +20,7 @@ Categories in use: `engineering`, `productivity`. Directory name **is** the skil
 
 **A skill that isn't ready to ship does not go in `skills/`.** There is no manifest; the installer
 finds skills by walking `skills/`, so placement is the only curation mechanism (ADR-0002). Put
-work-in-progress in a top-level `in-progress/` directory instead, and promote by moving it.
+work-in-progress in a top-level `experimental/` directory instead, and promote by moving it.
 
 Never move a shipped skill's directory. The installer records its path verbatim in a lockfile on
 every user's machine.
@@ -70,6 +70,9 @@ node scripts/validate-skills.mjs
 `scripts/sync-skills.sh` copies the repo's skills into `~/.agents/skills` and links them into
 `~/.claude/skills` for authoring. Run it after every edit, then restart your session. It is not
 an installer.
+
+By default it syncs only `skills/`. Pass `--experimental` to also sync staged skills from
+`experimental/` — you need that to test one, since an unsynced skill cannot be invoked at all.
 
 Do **not** symlink a per-agent skill directory straight at this repo. Skill discovery does not
 reliably follow a symlink that resolves outside the canonical skills tree, and the skills vanish
