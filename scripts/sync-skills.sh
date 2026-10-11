@@ -59,11 +59,20 @@ if [[ ! -w "${canonical}" ]]; then
 fi
 
 synced=0
+seen=" "
 
 while IFS= read -r skill_md; do
   skill_dir="$(dirname "${skill_md}")"
   skill_name="$(basename "${skill_dir}")"
   target="${canonical}/${skill_name}"
+
+  # Shipped skills are listed first. A second skill with the same name — e.g. a
+  # staged copy of a shipped skill — would silently overwrite the first.
+  if [[ "${seen}" == *" ${skill_name} "* ]]; then
+    echo "WARN: ${skill_dir} has the same name as a skill already synced; skipped."
+    continue
+  fi
+  seen="${seen}${skill_name} "
 
   # A symlink here is the old broken authoring setup, or another repo's link.
   # Replace it with a real directory rather than writing through it.
