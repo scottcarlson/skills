@@ -154,7 +154,17 @@ config. A subagent must never get to decide for itself what counts as passing.
 
 ### 1.5 Capture the baseline
 
-Run the gate on the base branch and record every failure to `baseline.json`.
+Create the integration branch `gnhf/<spec>-<slug>` from `origin/<base_branch>` in its own worktree:
+
+```bash
+git worktree add .ig.good-night/gh-<spec>-<slug>/wt-integration -b gnhf/<spec>-<slug> origin/<base_branch>
+```
+
+The user's primary tree is never checked out or merged into — it may be on any branch, holding
+anything. Every merge and every post-merge gate run in [§2.4](#24-merge-one-at-a-time) happens in
+`wt-integration`.
+
+Run the install command there, then the gate, and record every failure to `baseline.json`.
 
 **Green means "no new failures versus baseline", not "no failures".** A red starting tree is common
 and must not cost the night — but a ticket may never *add* a failure. Re-capture the baseline after
@@ -260,7 +270,7 @@ the path**. Schema:
 
 ### 2.4 Merge, one at a time
 
-Never merge two tickets at once. For each green ticket, in order:
+Never merge two tickets at once. Merge inside `wt-integration`. For each green ticket, in order:
 
 1. Push the ticket branch. **Push it even though you are about to merge it** — if the integration
    branch ends up a mess, per-ticket branches are how the user salvages the tickets that went fine.
