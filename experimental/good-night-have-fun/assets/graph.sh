@@ -41,6 +41,7 @@ gh api "repos/$REPO/issues/$SPEC/timeline?per_page=100" --paginate \
 : > "$W/edges.txt"
 : > "$W/nodes.jsonl"
 placeholders=()
+no_blocked_by=()
 skip_notparent=()
 skip_closed=()
 skip_notready=()
@@ -71,6 +72,9 @@ while read -r n; do
   jq -e '.labels | map(.name) | index("ready-for-agent")' "$W/i$n.json" >/dev/null \
     || { skip_notready+=("$n"); continue; }
 
+  # A missing heading is missing dependency data, not "no blockers": treating it
+  # as a root would run the ticket before whatever it actually depends on.
+  jq -r '.body' "$W/i$n.json" | grep -q '^## Blocked by' || { no_blocked_by+=("$n"); continue; }
   section=$(jq -r '.body' "$W/i$n.json" | awk '/^## Blocked by/{f=1;next} /^## /{f=0} f')
 
   # An unexpanded shell variable means the generator wrote `#$N4` instead of an
@@ -111,6 +115,14 @@ while read -r n; do
 $section
 EOF
 done < "$W/children.txt"
+
+# Checked before "nothing runnable": tickets skipped for this reason are not
+# missing work, and the generic message would send the user looking elsewhere.
+if [ ${#no_blocked_by[@]} -gt 0 ]; then
+  fail "no '## Blocked by' section on issue(s): ${no_blocked_by[*]}.
+  Without it their dependencies are unknown, not empty. Add the section — with the
+  blockers, or a line saying there are none — before running."
+fi
 
 # Distinguish the reasons there is nothing to do. "No work" and "the work is
 # finished" and "this is a companion spec whose tickets hang off a sibling" are

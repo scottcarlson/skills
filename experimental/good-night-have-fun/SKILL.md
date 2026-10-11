@@ -112,6 +112,8 @@ saying there are none. Any other non-blank line is a hard fail rather than a gue
   work they clean up after. Name the affected issues and stop.
 - **A cycle.**
 - **An edge pointing at an issue that does not exist.**
+- **A ticket with no `## Blocked by` section.** Its dependencies are unknown, not empty; treating
+  it as a root would run it before whatever it depends on.
 - **A phase-tag contradiction.** Tickets carry a phase in their `## Parent` line — `**PR1**`,
   `**PR2**`, `**cleanup**`, and so on. Phase order and `## Blocked by` encode the same constraint
   from two angles, and they are written by hand independently. If an edge runs backwards against
