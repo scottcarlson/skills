@@ -112,6 +112,10 @@ saying there are none. Any other non-blank line is a hard fail rather than a gue
   work they clean up after. Name the affected issues and stop.
 - **A cycle.**
 - **An edge pointing at an issue that does not exist.**
+- **A phase-tag contradiction.** Tickets carry a phase in their `## Parent` line — `**PR1**`,
+  `**PR2**`, `**cleanup**`, and so on. Phase order and `## Blocked by` encode the same constraint
+  from two angles, and they are written by hand independently. If an edge runs backwards against
+  phase order, one of the two is wrong and there is no way to tell which at 3am. Stop.
 
 A blocker that sits *outside* the graph is **not** an error, and this distinction matters because
 specs are routinely half-worked:
@@ -127,10 +131,6 @@ When nothing runnable is found, say *which* of these it was: all children closed
 done), children open but unlabelled, or nothing declaring this spec as parent (it may be a
 companion spec whose tickets hang off a sibling). One generic "no tickets found" sends the user
 looking in the wrong place.
-- **A phase-tag contradiction.** Tickets carry a phase in their `## Parent` line — `**PR1**`,
-  `**PR2**`, `**cleanup**`, and so on. Phase order and `## Blocked by` encode the same constraint
-  from two angles, and they are written by hand independently. If an edge runs backwards against
-  phase order, one of the two is wrong and there is no way to tell which at 3am. Stop.
 
 Write the graph to `graph.json`.
 
