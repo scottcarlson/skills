@@ -20,16 +20,18 @@ W=$(mktemp -d)
 trap 'rm -rf "$W"' EXIT
 
 fail() { printf 'FATAL: %s\n' "$1" >&2; exit 1; }
+case "$SPEC" in ''|*[!0-9]*) fail "spec must be an issue number, got '$SPEC'" ;; esac
 
 # 1. Discover children.
 #
 # There is no structural spec -> child link to rely on: native sub-issues,
 # dependencies and milestones all go unused by the ticket-generation step. The
 # timeline is the only complete source, and it is heuristic — anything that
-# mentions the spec shows up — so the `Spec: #N` body check below is required,
-# not belt-and-braces.
+# mentions the spec shows up — so the `## Parent` check below is required, not
+# belt-and-braces.
 gh api "repos/$REPO/issues/$SPEC/timeline?per_page=100" --paginate \
-  --jq '.[] | select(.event=="cross-referenced") | select(.source.issue.pull_request==null) | .source.issue.number' \
+  --jq '.[] | select(.event=="cross-referenced") | select(.source.issue.pull_request==null)
+         | select(.source.issue.repository.full_name=="'"$REPO"'") | .source.issue.number' \
   2>/dev/null | sort -n -u > "$W/children.txt" \
   || fail "could not read the timeline for #$SPEC"
 
@@ -46,8 +48,12 @@ skip_notready=()
 while read -r n; do
   # `< /dev/null` is load-bearing: gh otherwise eats this loop's stdin and the
   # loop exits after one iteration.
+  #
+  # A failed fetch is fatal, not a skip: dropping the ticket yields a graph that
+  # looks valid while silently missing work and the edges through it.
   gh issue view "$n" -R "$REPO" \
-    --json number,title,state,labels,body < /dev/null > "$W/i$n.json" 2>/dev/null || continue
+    --json number,title,state,labels,body < /dev/null > "$W/i$n.json" 2>"$W/err" \
+    || fail "could not fetch cross-referenced issue #$n: $(head -1 "$W/err")"
 
   # Two filters. `ready-for-agent` alone sweeps in unrelated issues elsewhere in
   # the repo; the cross-reference alone sweeps in anything that mentions the
@@ -59,7 +65,7 @@ while read -r n; do
   # so anchoring on a `Spec:` prefix silently finds zero children on older
   # repos, which is indistinguishable from "this spec has no work".
   parent=$(jq -r '.body' "$W/i$n.json" | awk '/^## Parent/{f=1;next} /^## /{f=0} f')
-  printf '%s' "$parent" | grep -qE "#$SPEC\b" || { skip_notparent+=("$n"); continue; }
+  printf '%s' "$parent" | grep -qE "#${SPEC}([^0-9]|\$)" || { skip_notparent+=("$n"); continue; }
 
   [ "$(jq -r '.state' "$W/i$n.json")" = "OPEN" ] || { skip_closed+=("$n"); continue; }
   jq -e '.labels | map(.name) | index("ready-for-agent")' "$W/i$n.json" >/dev/null \
@@ -81,9 +87,29 @@ while read -r n; do
   jq -c --arg phase "$phase" \
     '{number, title, phase: $phase, labels: [.labels[].name]}' "$W/i$n.json" >> "$W/nodes.jsonl"
 
-  for d in $(printf '%s' "$section" | grep -oE '#[0-9]+' | tr -d '#'); do
-    printf '%s %s\n' "$d" "$n" >> "$W/edges.txt"
-  done
+  # Parse line by line, loud in both directions. A list item (or a line that
+  # starts with `#N`) contributes every `#N` on it; a "none" literal is skipped;
+  # anything else is fatal. Taking every `#N` in the section would turn prose
+  # ("None (see #300)") into edges, and skipping unknown lines would silently
+  # drop real ones.
+  while IFS= read -r line; do
+    line=$(printf '%s' "$line" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')
+    [ -n "$line" ] || continue
+    case "$line" in '<!--'*'-->'|*'#$'*) continue ;; esac   # comments; placeholders reported above
+    body=$(printf '%s' "$line" | sed -E 's/^([-*+]|[0-9]+\.)[[:space:]]+//')
+    printf '%s' "$body" | grep -qiE '^(none|n/a|nothing)([^[:alnum:]]|$)|^(-|—)$' && continue
+    if [ "$body" != "$line" ] || printf '%s' "$body" | grep -qE '^#[0-9]'; then
+      deps=$(printf '%s' "$body" | grep -oE '#[0-9]+' | tr -d '#')
+      [ -n "$deps" ] || fail "issue #$n has a '## Blocked by' item with no issue number: $line"
+      for d in $deps; do
+        printf '%s %s\n' "$d" "$n" >> "$W/edges.txt"
+      done
+    else
+      fail "issue #$n has an unrecognised line in '## Blocked by': $line"
+    fi
+  done <<EOF
+$section
+EOF
 done < "$W/children.txt"
 
 # Distinguish the reasons there is nothing to do. "No work" and "the work is
@@ -125,25 +151,36 @@ while read -r from to; do
     printf '%s %s\n' "$from" "$to" >> "$W/edges_internal.txt"
     continue
   fi
-  st=$(gh issue view "$from" -R "$REPO" --json state --jq '.state' < /dev/null 2>/dev/null) || st=""
+  # Only a definite "no such issue" means the blocker does not exist. Anything
+  # else (rate limit, network, auth) is a fetch failure and is reported as one.
+  if ! st=$(gh issue view "$from" -R "$REPO" --json state,stateReason \
+         --jq '.state + ":" + (.stateReason // "")' < /dev/null 2>"$W/err"); then
+    grep -q 'Could not resolve to an issue' "$W/err" \
+      || fail "could not fetch blocker #$from of issue #$to: $(head -1 "$W/err")"
+    st=""
+  fi
   case "$st" in
-    CLOSED)
-      : ;;                                        # satisfied; drop the edge
-    OPEN)
+    OPEN:*|CLOSED:NOT_PLANNED|CLOSED:DUPLICATE)
       # A real, unsatisfied blocker that this run cannot execute — it is not a
-      # ready-for-agent child of this spec. The ticket is externally blocked.
+      # ready-for-agent child of this spec, or it was closed without the work
+      # being done. The ticket is externally blocked.
       # Record it and let the run prune that subtree; do not halt the night.
       printf '%s %s\n' "$to" "$from" >> "$W/external_blocks.txt" ;;
+    CLOSED:*|MERGED:*)
+      : ;;                                        # completed (or a merged PR); drop the edge
     *)
       fail "issue #$to declares a blocker #$from that does not exist in $REPO." ;;
   esac
 done < <(sort -u "$W/edges.txt")
 mv "$W/edges_internal.txt" "$W/edges.txt"
 
-# 4. Topological sort. tsort fails loudly on a cycle.
+# 4. Topological sort. GNU tsort exits non-zero on a cycle; BSD tsort (macOS)
+#    only warns "cycle in data" and exits 0, so stderr output counts as a cycle.
 jq -r '.number | "ROOT \(.)"' "$W/nodes.jsonl" > "$W/roots.txt"
-order=$(cat "$W/edges.txt" "$W/roots.txt" | tsort 2>"$W/tsort.err" | grep -v '^ROOT$') \
-  || fail "the dependency graph contains a cycle: $(tr '\n' ' ' < "$W/tsort.err")"
+order=$(cat "$W/edges.txt" "$W/roots.txt" | tsort 2>"$W/tsort.err" | grep -v '^ROOT$')
+if [ $? -ne 0 ] || [ -s "$W/tsort.err" ]; then
+  fail "the dependency graph contains a cycle: $(tr '\n' ' ' < "$W/tsort.err")"
+fi
 
 # 5. Phase tags and blocking edges encode the same constraint independently. If
 #    they disagree, one is wrong and there is no way to tell which at 3am.
@@ -153,6 +190,7 @@ phase_rank() {
   case "$1" in
     *cleanup*)   echo 5 ;;   # matched before PR2 — "cleanup" tags may name a PR
     *gate*)      echo 2 ;;   # e.g. "the gate between PR1 and PR2"
+    *PR[1-9][0-9]*) echo 4 ;; # PR10 and up; before PR1, which would match PR10
     *PR1*)       echo 1 ;;
     *PR2*)       echo 3 ;;
     *PR[3-9]*)   echo 4 ;;
@@ -170,13 +208,14 @@ done < <(sort -u "$W/edges.txt")
 
 jq -n \
   --argjson nodes "$(jq -s '.' "$W/nodes.jsonl")" \
-  --argjson edges "$(awk '{printf "{\"blocks\":%s,\"blocked\":%s}\n", $2, $1}' "$W/edges.txt" | jq -s 'unique')" \
+  --argjson edges "$(awk '{printf "{\"ticket\":%s,\"blocked_by\":%s}\n", $2, $1}' "$W/edges.txt" | jq -s 'unique')" \
   --argjson order "$(printf '%s\n' "$order" | jq -R . | jq -s 'map(select(. != "") | tonumber)')" \
   --argjson external "$(awk '{printf "{\"ticket\":%s,\"blocked_by\":%s}\n", $1, $2}' "$W/external_blocks.txt" | jq -s 'unique')" \
   --arg spec "$SPEC" --arg repo "$REPO" \
   '{spec: ($spec|tonumber), repo: $repo, nodes: $nodes, edges: $edges,
     order: $order, external_blocks: $external}' \
-  > "$OUT/graph.json"
+  > "$W/graph.json" || fail "could not assemble graph.json"
+mv "$W/graph.json" "$OUT/graph.json"
 
 printf 'graph.json written: %s node(s), %s edge(s), %s externally blocked\n' \
   "$(jq '.nodes | length' "$OUT/graph.json")" \

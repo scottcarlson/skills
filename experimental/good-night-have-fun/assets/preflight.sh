@@ -39,8 +39,15 @@ git rev-parse --is-inside-work-tree >/dev/null 2>&1 \
 if ! gh auth status >/dev/null 2>&1; then
   fatal+=("\`gh\` is not authenticated. Run \`gh auth login\`.")
 else
-  gh auth status 2>&1 | grep -q "'repo'" \
-    || warn+=("\`gh\` token may lack the \`repo\` scope; issue comments and PR creation could fail.")
+  # Classic tokens list their scopes; fine-grained and app tokens print
+  # "none" or nothing, so absence there is unknowable rather than missing.
+  scopes=$(gh auth status --active 2>&1 | grep 'Token scopes:' | head -1)
+  if printf '%s' "$scopes" | grep -q "'"; then
+    printf '%s' "$scopes" | grep -q "'repo'" \
+      || fatal+=("\`gh\` token lacks the \`repo\` scope; issue comments and PR creation will fail. Run \`gh auth refresh -s repo\`.")
+  else
+    warn+=("Could not read \`gh\` token scopes (fine-grained or app token?); confirm it can comment on issues and open PRs.")
+  fi
 fi
 
 # A dirty tree would be swept into the first worktree and land in someone's PR.
@@ -58,20 +65,25 @@ else
   fatal+=("Could not resolve the default branch from \`gh repo view\`.")
 fi
 
+# graph.sh needs owner/repo; an empty value would only surface after hand-over.
 repo=$(gh repo view --json nameWithOwner --jq '.nameWithOwner' 2>/dev/null) || repo=""
+[ -n "$repo" ] || fatal+=("Could not resolve owner/repo from \`gh repo view\`.")
 
 git worktree list >/dev/null 2>&1 \
   || fatal+=("\`git worktree\` is unavailable; this git is too old.")
 
 # The run writes payloads to .ig.good-night/. That rule is owned by
 # /setup-scott-carlson-skills, not by this skill.
-if [ -f .gitignore ] && grep -qE '^\.ig\.\*' .gitignore; then
+# Ask git rather than grepping .gitignore: `/.ig.*`, `.ig.*/` and a global
+# excludes file all count.
+if git -C "$(git rev-parse --show-toplevel 2>/dev/null || echo .)" \
+     check-ignore -q .ig.good-night/probe 2>/dev/null; then
   :
 else
   fatal+=("\`.gitignore\` does not cover \`.ig.*\`. Run \`/setup-scott-carlson-skills\` in this repo first.")
 fi
 
-# Matt Pocock's protocols are read off disk, not invoked. Missing is survivable;
+# The implement and pre-implement protocols are read off disk, not invoked. Missing is survivable;
 # the skill falls back to a minimal built-in protocol and says so.
 for s in implement pre-implement; do
   [ -r "$HOME/.agents/skills/$s/SKILL.md" ] \

@@ -36,9 +36,10 @@ Never contains operational instructions; those belong in `SKILL.md`.
 _Avoid_: docs, notes, README
 
 **Staged skill**:
-A skill still being written, kept outside `skills/` so the installer's directory walk never
-finds it. Placement is the curation mechanism; there is no manifest.
-_Avoid_: draft, experimental, WIP
+A skill still being written, kept in the top-level `experimental/` directory — outside `skills/` —
+so the installer's directory walk never finds it. Placement is the curation mechanism; there is no
+manifest. Promoted by moving it into `skills/`.
+_Avoid_: draft, WIP; "experimental" names the directory, not the concept
 
 ### Distribution
 
