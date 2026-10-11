@@ -80,11 +80,13 @@ case "$cmd" in
     # A ticket is ready when it is pending and every blocker has merged.
     # needs_human and failed blockers deliberately do NOT unblock: they prune
     # their subtree instead of halting the run.
+    # Emitted in topological order, so "take up to 3" takes the earliest.
     jq -r '
       .tickets as $t
-      | [ $t[] | select(.status == "pending")
-          | select([ .blocked_by[] | $t[tostring].status ] | all(. == "merged"))
-          | .number ] | .[]' "$L"
+      | .order[] | $t[tostring]
+      | select(.status == "pending")
+      | select([ .blocked_by[] | $t[tostring].status ] | all(. == "merged"))
+      | .number' "$L"
     ;;
 
   tally)
