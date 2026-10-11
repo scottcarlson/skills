@@ -184,7 +184,7 @@ while read -r from to; do
       fail "issue #$to declares a blocker #$from that does not exist in $REPO." ;;
   esac
 done < <(sort -u "$W/edges.txt")
-mv "$W/edges_internal.txt" "$W/edges.txt"
+mv "$W/edges_internal.txt" "$W/edges.txt" || fail "could not write the edge list"
 
 # 4. Topological sort. GNU tsort exits non-zero on a cycle; BSD tsort (macOS)
 #    only warns "cycle in data" and exits 0, so stderr output counts as a cycle.
@@ -227,7 +227,7 @@ jq -n \
   '{spec: ($spec|tonumber), repo: $repo, nodes: $nodes, edges: $edges,
     order: $order, external_blocks: $external}' \
   > "$W/graph.json" || fail "could not assemble graph.json"
-mv "$W/graph.json" "$OUT/graph.json"
+mv "$W/graph.json" "$OUT/graph.json" || fail "could not write $OUT/graph.json"
 
 printf 'graph.json written: %s node(s), %s edge(s), %s externally blocked\n' \
   "$(jq '.nodes | length' "$OUT/graph.json")" \

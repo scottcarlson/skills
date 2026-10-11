@@ -57,7 +57,7 @@ case "$cmd" in
                                      | .external_blocked_by += [$x.blocked_by])))' \
       "$graph" > "$tmp" \
       || { rm -f "$tmp"; printf 'FATAL: could not build the ledger from %s\n' "$graph" >&2; exit 1; }
-    mv "$tmp" "$L"
+    mv "$tmp" "$L" || { rm -f "$tmp"; printf 'FATAL: could not write %s\n' "$L" >&2; exit 1; }
     printf '%s\n' "$L"
     ;;
 
@@ -73,7 +73,7 @@ case "$cmd" in
         then error("unknown status: \($v)")
       else .tickets[$t][$f] = $v end' "$L" > "$tmp" \
       || { rm -f "$tmp"; exit 1; }
-    mv "$tmp" "$L"
+    mv "$tmp" "$L" || { rm -f "$tmp"; printf 'FATAL: could not write %s\n' "$L" >&2; exit 1; }
     ;;
 
   ready)
