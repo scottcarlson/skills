@@ -58,3 +58,9 @@ Its handoff also carries the standing reminder to write ADRs before that plannin
 a job a dedicated `to-adr` skill used to own as a separate pipeline step. Folded in here instead:
 it's one line the model already needs to see at handoff time, and a whole extra skill for one line
 was more ceremony than the reminder was worth.
+
+Intake also asks whether the run will be manual or GNHF (`good-night-have-fun`). That has to be
+decided here, because the planning that follows is shaped by it: an overnight run has no human to
+answer a question a ticket left open, so `to-spec` and `to-tickets` must be told up front to settle
+what they can. Intake is the last place the answer can be carried forward before a `/compact` or a
+fresh session erases the context that would have supplied it.

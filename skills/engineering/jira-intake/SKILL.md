@@ -66,14 +66,35 @@ Produce a **concise context brief** (aim for under 30 lines) from the digests: w
 
 Note where the detail lives (`TICKET.md`, `FIGMA-NOTES.md`, …) so any later session can pull it on demand instead of re-fetching.
 
-### 5. Ask: continue here, or hand off to a fresh session?
+### 5. Ask two questions: run mode, and continue-or-handoff
 
-Before doing anything else, ask:
+Before doing anything else, ask both together.
+
+**Run mode** — how will the tickets be worked once planning is done?
+
+> Will this be a **manual** run (you drive `/pre-implement` → `/implement` → `/code-review` per slice) or a **GNHF** run (`/good-night-have-fun` works the tickets overnight, AFK)?
+
+Manual is the default if I don't say. **GNHF** adds the AFK planning requirements below to whichever handoff I pick.
+
+**Session** —
 
 > Continue in this session (`/compact` then plan here), or create a **handoff document** for a completely fresh session?
 
 - **Continue here** → go to step 6a.
 - **Handoff document** → go to step 6b.
+
+### The GNHF planning requirements
+
+Only when I chose **GNHF**. Nobody will be at the keyboard between the first ticket and the morning, so `/to-spec` and `/to-tickets` must be built to do as much as can **safely** be done without a human in the loop, leaving me a PR and a summary rather than a queue of questions:
+
+- **Resolve open decisions during planning.** Anything left open, a ticket's agent will decide alone. Where a decision can't be settled, the ticket states its recommended answer.
+- **Tickets must be agent-completable**: acceptance criteria verifiable by the repo's gate, seams and test targets named, no "decide X" or "confirm with Y" inside the ticket body.
+- **Every ticket carries a `## Parent` section naming the spec and a `## Blocked by` section** (`- #<n>` lines, or an explicit "none"). Keep blocking edges honest and few so work runs in parallel and one failure prunes little.
+- **Put human-only work in its own ticket**, labelled `needs-human` and **not** `ready-for-agent` — third-party admin UIs, manual asset uploads, production-data checks, anything needing a judgment call the spec can't make. Minimise what depends on it.
+- **Check the target repo's `AGENTS.md`/`CLAUDE.md` has an `## Agent verification gate` block** (`run:`, `skip:`, optionally `install:`). If it doesn't, say so now — otherwise the run is ungated and every ticket ships stamped `⚠️ UNVERIFIED`.
+- **ADRs written before the reset**, as always — nobody is awake to re-argue a rejected option.
+
+The run itself is `/good-night-have-fun "GitHub issue #<spec>"` after `/to-tickets` and a `/clear`; I must stay for its preflight. Name that as the next step once `/to-tickets` is done.
 
 ### 6a. Hand off — same session, all five reminders every time
 
@@ -88,6 +109,7 @@ End with exactly these, in order:
    - **Write any missing ADRs before the next reset.** An ADR's value is the argument — the option rejected and why — and that's exactly what a reset destroys. Check `docs/adr/` on the filesystem for what already exists; write what's missing, matching the existing format.
    - **Keep the interview on the code and the acceptance criteria** — not commit hygiene, review process, or other delivery mechanics. Those belong to later skills.
    - **Don't produce logic code during planning.** That's `implement`'s job, after `to-tickets` has sliced the work.
+   - **If GNHF:** restate [the GNHF planning requirements](#the-gnhf-planning-requirements) in full, and **also write them to `RUN-MODE.md`** in the ticket directory (first line: `mode: gnhf`), because a `/compact` summary is lossy and this is the one reminder that must reach `/to-spec` and `/to-tickets` intact. Tell me to have the planning session read it.
 5. **Rename this session** — it is about to carry both phases. Print the command with the real ticket id substituted so I can copy and paste it:
 
    ```
@@ -106,11 +128,13 @@ Write a detailed `HANDOFF.md` into the ticket directory (`.ig.jira-tickets/<id>-
 - Pointers to every digest on disk (`TICKET.md`, `FIGMA-NOTES.md`, `IMAGE-NOTES.md`, `NOTES-DIGEST.md`, `INITIAL-PROMPT.md`) — whichever exist — so the fresh session pulls detail on demand instead of re-fetching.
 - Open questions and gaps flagged during intake.
 - The same standing reminders as 6a.4 (ADRs, keep the interview on code/AC, don't produce logic code during planning), since nothing downstream restates them.
+- **Run mode: manual or GNHF.** If GNHF, include the [GNHF planning requirements](#the-gnhf-planning-requirements) in full, as a section the fresh session cannot miss, and state that `/to-spec` and `/to-tickets` must honour them.
 
 Then give me a **ready-to-paste prompt for the new session**. It must:
 
 - Point at the handoff document's path and tell the new session to read it first.
 - Name the planning skill to invoke (`/grill-with-docs` or `/wayfinder`) and the ticket id.
+- State the run mode. If GNHF, say the planning must be AFK-ready and point at the handoff's GNHF section.
 - Surface any additional context, nuance, or clarification from *this* conversation that didn't make it into `HANDOFF.md` or the digests — anything said in passing, any ambiguity I should resolve up front, anything the new session would otherwise have to ask me to repeat.
 
 Finally, remind me to rename the **new** session once it opens, and print the command with the real ticket id substituted so I can copy and paste it:
