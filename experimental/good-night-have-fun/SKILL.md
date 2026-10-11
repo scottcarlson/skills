@@ -58,11 +58,11 @@ start the run. Hard-failing at 11pm is cheap. Discovering the same problem at 3a
 
 The argument holds a number, e.g. `"GitHub issue #356"`. That is the spec issue.
 
-Look under `.ig.good-night/` at the repo root for a directory starting with `gh-<spec>-`. One
-match, reuse it — unless it already holds a `ledger.json`: a previous run used it, and starting
-over would overwrite that run's record and re-dispatch tickets it already merged. **Hard fail**,
-print its `started_at` and `assets/ledger.sh tally`, and tell the user to rename or delete the
-directory to start fresh. Resuming a run is not supported. None, create
+Look under `.ig.good-night/` at the repo root for a directory starting with `gh-<spec>-`. One match,
+reuse it — unless it already holds a `ledger.json`: a previous run used it, and starting over would
+overwrite that run's record and re-dispatch tickets it already merged. **Hard fail**, print its
+`started_at` and `assets/ledger.sh tally`, and tell the user to rename or delete the directory, and
+delete its branches (below), to start fresh. Resuming a run is not supported. None, create
 `.ig.good-night/gh-<spec>-<slug>/`. Write the invoking message verbatim to `INITIAL-PROMPT.md`
 inside it.
 
@@ -78,6 +78,12 @@ printf '%s' "<spec title>" | tr '[:upper:]' '[:lower:]' \
 
 Use `spec` if that comes out empty, then **hard fail** unless
 `git check-ref-format --branch gnhf/<spec>-<slug>` accepts it.
+
+**Hard fail** if a previous run's branches still exist: any `gnhf/<spec>-*` or `gnhf/<spec>/*`
+branch, locally (`git branch --list`) or on origin (`git ls-remote --heads origin`). Cleanup
+deliberately leaves them, and `git worktree add -b` cannot recreate a name that exists. List them
+and tell the user to merge or close that work and delete the branches first. Never delete them
+yourself — they may be the only copy of a night's work.
 
 Confirm `.gitignore` covers `.ig.*`. If it does not, **hard fail**: tell the user to run
 `/setup-scott-carlson-skills`, which owns that line. This skill does not write `.gitignore`.
