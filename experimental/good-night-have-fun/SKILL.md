@@ -98,6 +98,11 @@ It **warns but does not fail** if `~/.agents/skills/implement/SKILL.md` or
 `~/.agents/skills/pre-implement/SKILL.md` is unreadable — see [§1.6](#16-triage-and-size) and
 [§2.2](#22-implement-one-ticket) for what happens then.
 
+The script cannot see which skills this session can call, so check that yourself: `code-review`,
+`resolving-merge-conflicts`, and `pr-description` must each appear in your available skills.
+**Hard fail** on any that is missing. Each is called after hand-over with no fallback, so a missing
+one fails every ticket — or the landing — at 3am instead of now.
+
 ### 1.3 Build the dependency graph
 
 Run `assets/graph.sh <spec> <repo> <run-dir>`, with `repo` from preflight's output. It writes
