@@ -74,7 +74,10 @@ git worktree list >/dev/null 2>&1 \
 
 # The run writes payloads to .ig.good-night/. That rule is owned by
 # /setup-scott-carlson-skills, not by this skill.
-if [ -f .gitignore ] && grep -qE '^\.ig\.\*' .gitignore; then
+# Ask git rather than grepping .gitignore: `/.ig.*`, `.ig.*/` and a global
+# excludes file all count.
+if git -C "$(git rev-parse --show-toplevel 2>/dev/null || echo .)" \
+     check-ignore -q .ig.good-night/probe 2>/dev/null; then
   :
 else
   fatal+=("\`.gitignore\` does not cover \`.ig.*\`. Run \`/setup-scott-carlson-skills\` in this repo first.")
