@@ -257,9 +257,9 @@ this skill restates none of Matt Pocock's implementation protocol, so his skill 
 anything here needing to be re-synced. If the file is unreadable, fall back to: write the test
 first at the seams the ticket names, typecheck as you go, run the gate at the end.
 
-Then, still inside the subagent: run the gate, and run `code-review` on the ticket's changes before
-it is offered for merge. Overnight machine time is cheap, and a review finding caught here is one
-that never contaminates the integration branch.
+Then, still inside the subagent, run the gate. Then call the Skill tool with `"code-review"` on the
+ticket's changes before it is offered for merge. Overnight machine time is cheap, and a review
+finding caught here is one that never contaminates the integration branch.
 
 Rules the subagent is given explicitly:
 
@@ -306,10 +306,10 @@ Never merge two tickets at once. Merge inside `wt-integration`. For each green t
 4. Only on a green gate: re-capture the baseline, `ledger.sh set` the ticket's status to
    `"merged"`, and remove the worktree.
 
-On a merge conflict: dispatch a resolution subagent pointed at the `resolving-merge-conflicts`
-skill. If it cannot resolve cleanly, abort the merge and treat the ticket as failed. Serialising
-merges is what makes a conflict arrive attached to one identifiable ticket, while the run still has
-hours to deal with it — rather than as one un-attributable pile-up at 4am.
+On a merge conflict, dispatch a resolution subagent and tell it: call the Skill tool with
+`"resolving-merge-conflicts"`. If it cannot resolve cleanly, abort the merge and treat the ticket as
+failed. Serialising merges is what makes a conflict arrive attached to one identifiable ticket,
+while the run still has hours to deal with it — rather than as one un-attributable pile-up at 4am.
 
 ### 2.5 Propagate what was learned
 
@@ -353,9 +353,9 @@ phase that deletes the old path. That is rare. When it happens, open one stacked
 based on the previous, because shipping a deletion in the same PR as the addition it replaces is a
 deploy hazard rather than a review inconvenience.
 
-Create the PR with a placeholder body, then call the `pr-description` skill with the new PR id. It
-posts without asking, which is what this run wants. It requires the PR to exist first — a
-description cannot be generated for a PR that has not been opened.
+Create the PR with a placeholder body. Then call the Skill tool with `"pr-description"`, passing the
+new PR id. It posts without asking, which is what this run wants. It requires the PR to exist first
+— a description cannot be generated for a PR that has not been opened.
 
 Add the `⚠️ UNVERIFIED` stamp to the PR body for any ungated ticket.
 
