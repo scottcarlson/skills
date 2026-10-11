@@ -99,7 +99,7 @@ nowhere else. Anchoring on a `Spec:` prefix finds zero children on older repos, 
 indistinguishable from "this spec has no work left".
 
 It parses each child's `## Blocked by` section into edges. Values are `- #<n>` lines, or a literal
-saying there are none.
+saying there are none. Any other non-blank line is a hard fail rather than a guess.
 
 **Hard fail on any of:**
 

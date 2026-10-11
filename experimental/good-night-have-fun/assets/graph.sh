@@ -86,9 +86,29 @@ while read -r n; do
   jq -c --arg phase "$phase" \
     '{number, title, phase: $phase, labels: [.labels[].name]}' "$W/i$n.json" >> "$W/nodes.jsonl"
 
-  for d in $(printf '%s' "$section" | grep -oE '#[0-9]+' | tr -d '#'); do
-    printf '%s %s\n' "$d" "$n" >> "$W/edges.txt"
-  done
+  # Parse line by line, loud in both directions. A list item (or a line that
+  # starts with `#N`) contributes every `#N` on it; a "none" literal is skipped;
+  # anything else is fatal. Taking every `#N` in the section would turn prose
+  # ("None (see #300)") into edges, and skipping unknown lines would silently
+  # drop real ones.
+  while IFS= read -r line; do
+    line=$(printf '%s' "$line" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')
+    [ -n "$line" ] || continue
+    case "$line" in '<!--'*'-->'|*'#$'*) continue ;; esac   # comments; placeholders reported above
+    body=$(printf '%s' "$line" | sed -E 's/^([-*+]|[0-9]+\.)[[:space:]]+//')
+    printf '%s' "$body" | grep -qiE '^(none|n/a|nothing)([^[:alnum:]]|$)|^(-|—)$' && continue
+    if [ "$body" != "$line" ] || printf '%s' "$body" | grep -qE '^#[0-9]'; then
+      deps=$(printf '%s' "$body" | grep -oE '#[0-9]+' | tr -d '#')
+      [ -n "$deps" ] || fail "issue #$n has a '## Blocked by' item with no issue number: $line"
+      for d in $deps; do
+        printf '%s %s\n' "$d" "$n" >> "$W/edges.txt"
+      done
+    else
+      fail "issue #$n has an unrecognised line in '## Blocked by': $line"
+    fi
+  done <<EOF
+$section
+EOF
 done < "$W/children.txt"
 
 # Distinguish the reasons there is nothing to do. "No work" and "the work is
