@@ -152,6 +152,12 @@ In order, stopping at the first that yields a command:
 You resolve the gate **once**. Subagents receive the literal command string and never see the
 config. A subagent must never get to decide for itself what counts as passing.
 
+Resolve the **install command** once alongside it, from the same sources in the same order: an
+`install:` line in that block, else the lockfile (`package-lock.json` → `npm ci`, `pnpm-lock.yaml` →
+`pnpm install --frozen-lockfile`, `yarn.lock` → `yarn install` with its frozen-lockfile flag, and so
+on). Running it during [§1.5](#15-capture-the-baseline) is what proves it works before anyone walks
+away; a ticket worktree must never be the first place it fails.
+
 ### 1.5 Capture the baseline
 
 Create the integration branch `gnhf/<spec>-<slug>` from `origin/<base_branch>` in its own worktree:
@@ -218,7 +224,7 @@ Take up to **3** tickets whose blockers are all merged. For each, in parallel:
 git worktree add .ig.good-night/gh-<spec>-<slug>/wt-<n> -b gnhf/<spec>/<n>-<slug> <integration-branch>
 ```
 
-Then run the repo's install command inside the worktree. Do it properly — do not symlink
+Then run the install command resolved in [§1.4](#14-resolve-the-gate) inside the worktree. Do it properly — do not symlink
 `node_modules` from the primary tree. Symlinking is faster and quietly wrong the moment two tickets
 touch dependencies, and **you have all night; wall-clock is the one resource this run has in
 abundance.** Trade it for correctness every time.
