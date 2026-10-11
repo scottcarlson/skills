@@ -67,7 +67,8 @@ Confirm `.gitignore` covers `.ig.*`. If it does not, **hard fail**: tell the use
 
 ### 1.2 Environment
 
-Run `assets/preflight.sh`. It checks, and **hard fails** on any of:
+Run `assets/preflight.sh` and keep its JSON stdout: `repo` and `base_branch` feed every step below.
+It checks, and **hard fails** on any of:
 
 - `gh auth status` — authenticated, with `repo` scope.
 - Working tree clean. Uncommitted changes would be swept into the first worktree.
@@ -81,7 +82,8 @@ It **warns but does not fail** if `~/.agents/skills/implement/SKILL.md` or
 
 ### 1.3 Build the dependency graph
 
-Run `assets/graph.sh <spec>`. Do not do this by hand and do not eyeball the output; the script is
+Run `assets/graph.sh <spec> <repo> <run-dir>`, with `repo` from preflight's output. It writes
+`<run-dir>/graph.json`. Do not do this by hand and do not eyeball the output; the script is
 deterministic and you are not.
 
 It discovers children by **timeline cross-references on the spec, filtered to issues that name the
