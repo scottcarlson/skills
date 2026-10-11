@@ -42,7 +42,7 @@ Non-negotiable, and the reason this skill can finish at all:
 | **Gate** | The command that decides whether a ticket is green. Resolved once, in preflight. |
 | **Baseline** | The set of gate failures already present before the run started. |
 | **Run directory** | `.ig.good-night/gh-<spec>-<slug>/`. All state, all artifacts, gitignored. |
-| **Ledger** | `ledger.json` in the run directory. The run's memory. |
+| **Ledger** | `ledger.json` in the run directory. The run's memory. Read and write it only through `assets/ledger.sh`. |
 | **Envelope** | One ticket's `envelope-<n>.json`. What a subagent returns. |
 
 ---
@@ -198,7 +198,19 @@ it waits for the user — and every other branch of the graph proceeds.
 
 ### 1.7 Print the plan and hand over the night
 
-Write `ledger.json`, then print, compactly:
+Create the ledger, passing an empty gate string when ungated:
+
+```bash
+assets/ledger.sh init <run-dir> <run-dir>/graph.json "<gate>" <base_branch> gnhf/<spec>-<slug>
+```
+
+Then mark each human-blocked ticket from [§1.6](#16-triage-and-size) with
+`assets/ledger.sh set <run-dir> <n> status '"needs_human"'` — `set` takes a JSON value, so strings
+carry their own quotes. Statuses are `pending`, `merged`, `failed`, `needs_human`,
+`blocked_by_failure`, and `blocked_external` (set by `init` from the graph). Record `attempts`,
+`branch`, `model`, and `envelope` the same way as they become known.
+
+Then print, compactly:
 
 - Execution order, with the model chosen per ticket.
 - What is human-blocked, and what that prunes.
@@ -218,7 +230,8 @@ runaway to guard against and therefore no wave cap. Keep going until the graph i
 
 ### 2.1 Dispatch a wave
 
-Take up to **3** tickets whose blockers are all merged. For each, in parallel:
+Take up to **3** tickets from `assets/ledger.sh ready <run-dir>` — pending, every blocker merged.
+For each, in parallel:
 
 ```bash
 git worktree add .ig.good-night/gh-<spec>-<slug>/wt-<n> -b gnhf/<spec>/<n>-<slug> <integration-branch>
@@ -286,7 +299,8 @@ Never merge two tickets at once. Merge inside `wt-integration`. For each green t
    it as a failed attempt under [§2.6](#26-failure-protocol), re-dispatching from the new
    integration head with the gate output. Never re-capture the baseline over a regression: that
    would turn a ticket adding a failure into the new normal.
-4. Only on a green gate: re-capture the baseline and remove the worktree.
+4. Only on a green gate: re-capture the baseline, `ledger.sh set` the ticket's status to
+   `"merged"`, and remove the worktree.
 
 On a merge conflict: dispatch a resolution subagent pointed at the `resolving-merge-conflicts`
 skill. If it cannot resolve cleanly, abort the merge and treat the ticket as failed. Serialising
@@ -312,8 +326,9 @@ Second failure: stop on that ticket.
 - `git worktree remove --force` the worktree, and delete the local branch. **That is the revert** —
   the work only ever existed in its own worktree, so nothing else is touched and there is nothing
   to unpick.
-- Record the failure and the gate output in the ledger.
-- **Prune the subtree** that depended on it and mark those tickets blocked-by-failure.
+- Set the ticket's status to `"failed"` in the ledger, and save the gate output beside it in the run
+  directory.
+- **Prune the subtree** that depended on it and set those tickets to `"blocked_by_failure"`.
 - Move on. One bad ticket must never cost the night.
 
 Do not attempt a third time. A third attempt at the same failure means the approach is wrong rather
@@ -358,7 +373,7 @@ Keep it scannable. It is read by someone holding a coffee, not debugging.
 
 ### 3.3 Notify
 
-Send one push notification with the tally:
+Send one push notification with the tally from `assets/ledger.sh tally <run-dir>`:
 
 ```
 9 shipped · 2 failed · 3 need you · PR #401
