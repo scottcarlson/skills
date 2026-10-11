@@ -21,6 +21,9 @@ L="$dir/ledger.json"
 case "$cmd" in
   init)
     graph="${3:?graph.json required}"; gate="${4-}"; base="${5:?base branch required}"; integ="${6:?integration branch required}"
+    # Build into a temp file: without set -e a failed jq would otherwise leave
+    # an empty ledger behind and still report success.
+    tmp=$(mktemp)
     jq --arg gate "$gate" --arg base "$base" --arg integ "$integ" \
       '{
          spec, repo, order,
@@ -50,7 +53,9 @@ case "$cmd" in
        | .tickets = (reduce .external_blocks[] as $x (.tickets;
            .[$x.ticket|tostring] |= (.status = "blocked_external"
                                      | .external_blocked_by += [$x.blocked_by])))' \
-      "$graph" > "$L"
+      "$graph" > "$tmp" \
+      || { rm -f "$tmp"; printf 'FATAL: could not build the ledger from %s\n' "$graph" >&2; exit 1; }
+    mv "$tmp" "$L"
     printf '%s\n' "$L"
     ;;
 

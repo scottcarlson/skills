@@ -187,7 +187,8 @@ jq -n \
   --arg spec "$SPEC" --arg repo "$REPO" \
   '{spec: ($spec|tonumber), repo: $repo, nodes: $nodes, edges: $edges,
     order: $order, external_blocks: $external}' \
-  > "$OUT/graph.json"
+  > "$W/graph.json" || fail "could not assemble graph.json"
+mv "$W/graph.json" "$OUT/graph.json"
 
 printf 'graph.json written: %s node(s), %s edge(s), %s externally blocked\n' \
   "$(jq '.nodes | length' "$OUT/graph.json")" \
