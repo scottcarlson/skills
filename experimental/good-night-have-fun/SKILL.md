@@ -238,9 +238,14 @@ assets/ledger.sh init <run-dir> <run-dir>/graph.json "<gate>" <base_branch> gnhf
 
 Then mark each human-blocked ticket from [§1.6](#16-triage-and-size) with
 `assets/ledger.sh set <run-dir> <n> status '"needs_human"'` — `set` takes a JSON value, so strings
-carry their own quotes. Statuses are `pending`, `merged`, `failed`, `needs_human`,
-`blocked_by_failure`, and `blocked_external` (set by `init` from the graph). Record `attempts`,
-`branch`, `model`, and `envelope` the same way as they become known.
+carry their own quotes — and prune its subtree with `assets/ledger.sh prune <run-dir> <n>`. Record
+`attempts`, `branch`, `model`, and `envelope` the same way as they become known.
+
+Statuses are `pending`, `merged`, `failed`, `needs_human`, and `blocked_external` (set by `init`
+from the graph), plus the three that `prune` gives a stopped ticket's dependents:
+`blocked_by_failure`, `blocked_by_human`, and `blocked_by_external` (also set by `init`). Every
+ticket must end the night in one of these and not `pending`; a pending ticket is never offered by
+`ready` and never counted by `tally`, so a subtree left pending makes the run look unfinished.
 
 Then print, compactly:
 
@@ -327,9 +332,9 @@ decide — is neither:
   the worktree.
 - `ledger.sh set` the status to `"needs_human"`, and carry `failure_reason` into the summary's
   **Needs you** section as the question to answer.
-- Do not retry it; a second attempt cannot answer a question the first could not. Its subtree
-  waits, exactly as for a ticket triaged `NEEDS_HUMAN` in [§1.6](#16-triage-and-size) — `ready`
-  never offers a ticket whose blocker has not merged.
+- Do not retry it; a second attempt cannot answer a question the first could not.
+- Prune its subtree with `ledger.sh prune <run-dir> <n>`, exactly as for a ticket triaged
+  `NEEDS_HUMAN` in [§1.6](#16-triage-and-size).
 
 ### 2.4 Merge, one at a time
 
@@ -372,7 +377,8 @@ Second failure: stop on that ticket.
   to unpick.
 - Set the ticket's status to `"failed"` in the ledger, and save the gate output beside it in the run
   directory.
-- **Prune the subtree** that depended on it and set those tickets to `"blocked_by_failure"`.
+- **Prune the subtree** that depended on it: `ledger.sh prune <run-dir> <n>` sets every pending
+  dependent to `blocked_by_failure`.
 - Move on. One bad ticket must never cost the night.
 
 Do not attempt a third time. A third attempt at the same failure means the approach is wrong rather

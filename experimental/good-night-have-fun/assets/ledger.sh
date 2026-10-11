@@ -12,9 +12,24 @@
 #   ledger.sh init   <dir> <graph.json> <gate-cmd> <base-branch> <integration-branch>
 #   ledger.sh set    <dir> <ticket> <field> <value>   # value is JSON
 #   ledger.sh ready  <dir>                            # tickets whose blockers are all merged
+#   ledger.sh prune  <dir> <ticket>                   # mark its pending dependents blocked
 #   ledger.sh tally  <dir>                            # one-line summary counts
 
 set -uo pipefail
+
+# Marks every pending transitive dependent of ticket $n with status $s. A
+# blocked subtree must end the night terminal: left `pending`, its tickets are
+# never ready and never counted, and the run looks unfinished rather than done.
+PRUNE='
+  def dependents($t; $n):
+    [ $t[] | select(any(.blocked_by[]; . == $n)) | .number ] as $d
+    | $d + ([ $d[] as $x | dependents($t; $x) ] | add // []);
+  def prune($n; $s):
+    .tickets as $t
+    | reduce (dependents($t; $n) | unique[]) as $d (.;
+        if .tickets[$d|tostring].status == "pending"
+        then .tickets[$d|tostring].status = $s else . end);
+'
 cmd="${1:?subcommand required}"; dir="${2:?run directory required}"
 L="$dir/ledger.json"
 
@@ -27,7 +42,7 @@ case "$cmd" in
     # an empty ledger behind and still report success.
     tmp=$(mktemp)
     jq --arg gate "$gate" --arg base "$base" --arg integ "$integ" \
-      '{
+      "$PRUNE"'{
          spec, repo, order,
          gate: (if $gate == "" then null else $gate end),
          base_branch: $base,
@@ -51,10 +66,12 @@ case "$cmd" in
        | .tickets = (reduce .edges[] as $e (.tickets;
            .[$e.ticket|tostring].blocked_by += [$e.blocked_by]))
        # An open blocker outside this run never merges, so the ticket can never
-       # become ready. Mark it now; `ready` then holds its whole subtree too.
+       # become ready. Mark it now, and its whole subtree with it.
        | .tickets = (reduce .external_blocks[] as $x (.tickets;
            .[$x.ticket|tostring] |= (.status = "blocked_external"
-                                     | .external_blocked_by += [$x.blocked_by])))' \
+                                     | .external_blocked_by += [$x.blocked_by])))
+       | reduce (.external_blocks | map(.ticket) | unique[]) as $x (.;
+           prune($x; "blocked_by_external"))' \
       "$graph" > "$tmp" \
       || { rm -f "$tmp"; printf 'FATAL: could not build the ledger from %s\n' "$graph" >&2; exit 1; }
     mv "$tmp" "$L" || { rm -f "$tmp"; printf 'FATAL: could not write %s\n' "$L" >&2; exit 1; }
@@ -69,17 +86,34 @@ case "$cmd" in
     jq --arg t "$t" --arg f "$field" --argjson v "$value" '
       if .tickets[$t] == null then error("unknown ticket: \($t)")
       elif $f == "status" and ($v | IN("pending", "merged", "failed", "needs_human",
-                                       "blocked_by_failure", "blocked_external") | not)
+                                       "blocked_by_failure", "blocked_by_human",
+                                       "blocked_external", "blocked_by_external") | not)
         then error("unknown status: \($v)")
       else .tickets[$t][$f] = $v end' "$L" > "$tmp" \
       || { rm -f "$tmp"; exit 1; }
     mv "$tmp" "$L" || { rm -f "$tmp"; printf 'FATAL: could not write %s\n' "$L" >&2; exit 1; }
     ;;
 
+  prune)
+    # The dependents' status follows from why the ticket stopped. A failed,
+    # human-blocked or externally blocked ticket prunes its subtree instead of
+    # halting the run.
+    t="${3:?ticket required}"
+    case "$t" in ''|*[!0-9]*) printf 'ticket must be a number, got %s\n' "$t" >&2; exit 2 ;; esac
+    tmp=$(mktemp)
+    jq --argjson n "$t" "$PRUNE"'
+      (.tickets[$n|tostring].status // error("unknown ticket: \($n)")) as $st
+      | ({ failed: "blocked_by_failure", blocked_by_failure: "blocked_by_failure",
+           needs_human: "blocked_by_human", blocked_by_human: "blocked_by_human",
+           blocked_external: "blocked_by_external", blocked_by_external: "blocked_by_external" }[$st]
+         // error("ticket \($n) is \($st); only a failed or blocked ticket prunes")) as $s
+      | prune($n; $s)' "$L" > "$tmp" \
+      || { rm -f "$tmp"; exit 1; }
+    mv "$tmp" "$L" || { rm -f "$tmp"; printf 'FATAL: could not write %s\n' "$L" >&2; exit 1; }
+    ;;
+
   ready)
     # A ticket is ready when it is pending and every blocker has merged.
-    # needs_human and failed blockers deliberately do NOT unblock: they prune
-    # their subtree instead of halting the run.
     # Emitted in topological order, so "take up to 3" takes the earliest.
     jq -r '
       .tickets as $t
@@ -93,7 +127,7 @@ case "$cmd" in
     jq -r '[.tickets[].status]
       | ((map(select(. == "merged")) | length | tostring) + " shipped · ")
       + ((map(select(. == "failed")) | length | tostring) + " failed · ")
-      + ((map(select(. == "needs_human" or . == "blocked_by_failure" or . == "blocked_external")) | length | tostring) + " need you")' "$L"
+      + ((map(select(. != "merged" and . != "failed" and . != "pending")) | length | tostring) + " need you")' "$L"
     ;;
 
   *) printf 'unknown subcommand: %s\n' "$cmd" >&2; exit 2 ;;
