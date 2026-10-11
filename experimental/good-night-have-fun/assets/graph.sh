@@ -187,6 +187,7 @@ phase_rank() {
   case "$1" in
     *cleanup*)   echo 5 ;;   # matched before PR2 — "cleanup" tags may name a PR
     *gate*)      echo 2 ;;   # e.g. "the gate between PR1 and PR2"
+    *PR[1-9][0-9]*) echo 4 ;; # PR10 and up; before PR1, which would match PR10
     *PR1*)       echo 1 ;;
     *PR2*)       echo 3 ;;
     *PR[3-9]*)   echo 4 ;;
