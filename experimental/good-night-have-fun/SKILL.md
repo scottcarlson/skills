@@ -62,8 +62,22 @@ Look under `.ig.good-night/` at the repo root for a directory starting with `gh-
 match, reuse it — unless it already holds a `ledger.json`: a previous run used it, and starting
 over would overwrite that run's record and re-dispatch tickets it already merged. **Hard fail**,
 print its `started_at` and `assets/ledger.sh tally`, and tell the user to rename or delete the
-directory to start fresh. Resuming a run is not supported. None, create `.ig.good-night/gh-<spec>-<short-slug>/` where the slug comes from
-the spec title. Write the invoking message verbatim to `INITIAL-PROMPT.md` inside it.
+directory to start fresh. Resuming a run is not supported. None, create
+`.ig.good-night/gh-<spec>-<slug>/`. Write the invoking message verbatim to `INITIAL-PROMPT.md`
+inside it.
+
+The `<slug>` comes from the spec title, and the same one is used everywhere — the run directory and
+every `gnhf/` branch. Titles routinely hold characters a git ref rejects (`:`, `/`, `?`, `*`), and
+a bad ref would only surface at `git worktree add -b`, after the user has walked away. Derive it
+mechanically, never by hand:
+
+```bash
+printf '%s' "<spec title>" | tr '[:upper:]' '[:lower:]' \
+  | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//' | cut -c1-40 | sed -E 's/-+$//'
+```
+
+Use `spec` if that comes out empty, then **hard fail** unless
+`git check-ref-format --branch gnhf/<spec>-<slug>` accepts it.
 
 Confirm `.gitignore` covers `.ig.*`. If it does not, **hard fail**: tell the user to run
 `/setup-scott-carlson-skills`, which owns that line. This skill does not write `.gitignore`.
