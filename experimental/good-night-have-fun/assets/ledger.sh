@@ -21,6 +21,8 @@ L="$dir/ledger.json"
 case "$cmd" in
   init)
     graph="${3:?graph.json required}"; gate="${4-}"; base="${5:?base branch required}"; integ="${6:?integration branch required}"
+    # Never clobber a previous run's record; SKILL.md §1.1 decides what to do.
+    [ ! -e "$L" ] || { printf 'FATAL: %s already exists; refusing to overwrite a previous run.\n' "$L" >&2; exit 1; }
     # Build into a temp file: without set -e a failed jq would otherwise leave
     # an empty ledger behind and still report success.
     tmp=$(mktemp)
