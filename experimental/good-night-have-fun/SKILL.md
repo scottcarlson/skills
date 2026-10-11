@@ -373,6 +373,11 @@ than the execution, and grinding it unattended just spends money to arrive at th
 
 ### 3.1 Branches and PRs
 
+**If nothing merged** — every ticket failed or waits on a human — skip this section entirely:
+the integration branch has no commits over the base, GitHub rejects a PR with no diff, and a failed
+`gh pr create` must not stop the run before the summary is written. Go straight to
+[§3.2](#32-the-summary), which says why nothing shipped.
+
 Push the integration branch `gnhf/<spec>-<slug>`. Open **one PR** against the base branch resolved
 in preflight.
 
