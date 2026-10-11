@@ -152,19 +152,21 @@ while read -r from to; do
   fi
   # Only a definite "no such issue" means the blocker does not exist. Anything
   # else (rate limit, network, auth) is a fetch failure and is reported as one.
-  if ! st=$(gh issue view "$from" -R "$REPO" --json state --jq '.state' < /dev/null 2>"$W/err"); then
+  if ! st=$(gh issue view "$from" -R "$REPO" --json state,stateReason \
+         --jq '.state + ":" + (.stateReason // "")' < /dev/null 2>"$W/err"); then
     grep -q 'Could not resolve to an issue' "$W/err" \
       || fail "could not fetch blocker #$from of issue #$to: $(head -1 "$W/err")"
     st=""
   fi
   case "$st" in
-    CLOSED)
-      : ;;                                        # satisfied; drop the edge
-    OPEN)
+    OPEN:*|CLOSED:NOT_PLANNED|CLOSED:DUPLICATE)
       # A real, unsatisfied blocker that this run cannot execute — it is not a
-      # ready-for-agent child of this spec. The ticket is externally blocked.
+      # ready-for-agent child of this spec, or it was closed without the work
+      # being done. The ticket is externally blocked.
       # Record it and let the run prune that subtree; do not halt the night.
       printf '%s %s\n' "$to" "$from" >> "$W/external_blocks.txt" ;;
+    CLOSED:*|MERGED:*)
+      : ;;                                        # completed (or a merged PR); drop the edge
     *)
       fail "issue #$to declares a blocker #$from that does not exist in $REPO." ;;
   esac

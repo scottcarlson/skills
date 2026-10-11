@@ -116,9 +116,11 @@ saying there are none. Any other non-blank line is a hard fail rather than a gue
 A blocker that sits *outside* the graph is **not** an error, and this distinction matters because
 specs are routinely half-worked:
 
-- **Blocker is closed** → already satisfied. Drop the edge and carry on. Failing here would refuse
-  to run any spec that had been partly completed, which is most of them.
-- **Blocker is open but not a `ready-for-agent` child of this spec** → a genuine external block.
+- **Blocker is closed as completed** (or is a merged PR) → already satisfied. Drop the edge and
+  carry on. Failing here would refuse to run any spec that had been partly completed, which is
+  most of them.
+- **Blocker is open but not a `ready-for-agent` child of this spec, or was closed as not planned
+  or duplicate** → a genuine external block: the work it stood for has not been done.
   Record it, mark the ticket blocked, prune its subtree, and **keep going.**
 
 When nothing runnable is found, say *which* of these it was: all children closed (the spec is
