@@ -44,19 +44,19 @@ preflight, while the user is still watching.
 
 **The spec issue is the argument, not a label.** A label answers "which issues are agent-ready" but
 not "which belong together" or "in what order". The spec answers all three, and it is an artifact
-the pipeline already produced. Membership comes from timeline cross-references confirmed by a
-`Spec: #N` line in the ticket body; order comes from `## Blocked by`.
+the pipeline already produced. Membership comes from timeline cross-references confirmed by the
+spec number appearing in the ticket's `## Parent` section; order comes from `## Blocked by`.
 
 **Declared dependencies only — never inferred.** The edges are in the tickets. Inferring them costs
 Orchestrator context and produces a graph nobody can audit. Where the declared data is corrupt, the
 run stops rather than guessing: a wrong order silently produces cleanup tickets that run before the
 work they clean up after, and that is indistinguishable from success until you read the diff.
 
-**Matt Pocock's skills are read, not restated.** `implement` and `pre-implement` are user-invoked,
-so no skill can call them. Rather than copying their protocols into this one — which would need
-re-syncing every time he ships — subagents read the installed `SKILL.md` off disk and follow it.
-The coupling is to a file path, it is checked in preflight, and it means his improvements arrive
-for free.
+**The implementation protocols are read, not restated.** `implement` (Matt Pocock's) and
+`pre-implement` (this repo's) are user-invoked, so no skill can call them. Rather than copying their
+protocols into this one — which would need re-syncing every time either ships — subagents read the
+installed `SKILL.md` off disk and follow it. The coupling is to a file path, it is checked in
+preflight, and it means improvements arrive for free.
 
 **Wall-clock is spent freely; context is not.** Real dependency installs per worktree instead of
 symlinks, a code review per ticket, the gate re-run after every merge. An overnight run has hours

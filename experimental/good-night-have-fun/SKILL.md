@@ -132,8 +132,6 @@ done), children open but unlabelled, or nothing declaring this spec as parent (i
 companion spec whose tickets hang off a sibling). One generic "no tickets found" sends the user
 looking in the wrong place.
 
-Write the graph to `graph.json`.
-
 ### 1.4 Resolve the gate
 
 In order, stopping at the first that yields a command:

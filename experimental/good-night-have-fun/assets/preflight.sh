@@ -83,7 +83,7 @@ else
   fatal+=("\`.gitignore\` does not cover \`.ig.*\`. Run \`/setup-scott-carlson-skills\` in this repo first.")
 fi
 
-# Matt Pocock's protocols are read off disk, not invoked. Missing is survivable;
+# The implement and pre-implement protocols are read off disk, not invoked. Missing is survivable;
 # the skill falls back to a minimal built-in protocol and says so.
 for s in implement pre-implement; do
   [ -r "$HOME/.agents/skills/$s/SKILL.md" ] \

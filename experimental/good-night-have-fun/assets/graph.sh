@@ -26,8 +26,8 @@ fail() { printf 'FATAL: %s\n' "$1" >&2; exit 1; }
 # There is no structural spec -> child link to rely on: native sub-issues,
 # dependencies and milestones all go unused by the ticket-generation step. The
 # timeline is the only complete source, and it is heuristic — anything that
-# mentions the spec shows up — so the `Spec: #N` body check below is required,
-# not belt-and-braces.
+# mentions the spec shows up — so the `## Parent` check below is required, not
+# belt-and-braces.
 gh api "repos/$REPO/issues/$SPEC/timeline?per_page=100" --paginate \
   --jq '.[] | select(.event=="cross-referenced") | select(.source.issue.pull_request==null)
          | select(.source.issue.repository.full_name=="'"$REPO"'") | .source.issue.number' \
