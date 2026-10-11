@@ -207,7 +207,7 @@ done < <(sort -u "$W/edges.txt")
 
 jq -n \
   --argjson nodes "$(jq -s '.' "$W/nodes.jsonl")" \
-  --argjson edges "$(awk '{printf "{\"blocks\":%s,\"blocked\":%s}\n", $2, $1}' "$W/edges.txt" | jq -s 'unique')" \
+  --argjson edges "$(awk '{printf "{\"ticket\":%s,\"blocked_by\":%s}\n", $2, $1}' "$W/edges.txt" | jq -s 'unique')" \
   --argjson order "$(printf '%s\n' "$order" | jq -R . | jq -s 'map(select(. != "") | tonumber)')" \
   --argjson external "$(awk '{printf "{\"ticket\":%s,\"blocked_by\":%s}\n", $1, $2}' "$W/external_blocks.txt" | jq -s 'unique')" \
   --arg spec "$SPEC" --arg repo "$REPO" \

@@ -49,7 +49,7 @@ case "$cmd" in
          external_blocks: (.external_blocks // [])
        }
        | .tickets = (reduce .edges[] as $e (.tickets;
-           .[$e.blocks|tostring].blocked_by += [$e.blocked]))
+           .[$e.ticket|tostring].blocked_by += [$e.blocked_by]))
        # An open blocker outside this run never merges, so the ticket can never
        # become ready. Mark it now; `ready` then holds its whole subtree too.
        | .tickets = (reduce .external_blocks[] as $x (.tickets;
