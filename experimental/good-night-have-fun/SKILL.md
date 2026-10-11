@@ -264,9 +264,13 @@ Never merge two tickets at once. For each green ticket, in order:
 
 1. Push the ticket branch. **Push it even though you are about to merge it** — if the integration
    branch ends up a mess, per-ticket branches are how the user salvages the tickets that went fine.
-2. Merge into the integration branch.
-3. Re-run the gate. Re-capture the baseline.
-4. Remove the worktree.
+2. Note the integration branch's SHA, then merge into it.
+3. Re-run the gate. **New failures versus baseline mean the merge broke something** — two tickets
+   can each pass alone and fail together. Reset the integration branch to the noted SHA and treat
+   it as a failed attempt under [§2.6](#26-failure-protocol), re-dispatching from the new
+   integration head with the gate output. Never re-capture the baseline over a regression: that
+   would turn a ticket adding a failure into the new normal.
+4. Only on a green gate: re-capture the baseline and remove the worktree.
 
 On a merge conflict: dispatch a resolution subagent pointed at the `resolving-merge-conflicts`
 skill. If it cannot resolve cleanly, abort the merge and treat the ticket as failed. Serialising
