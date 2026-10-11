@@ -70,7 +70,8 @@ Confirm `.gitignore` covers `.ig.*`. If it does not, **hard fail**: tell the use
 Run `assets/preflight.sh` and keep its JSON stdout: `repo` and `base_branch` feed every step below.
 It checks, and **hard fails** on any of:
 
-- `gh auth status` — authenticated, with `repo` scope.
+- `gh auth status` — authenticated, with `repo` scope. A fine-grained or app token reports no
+  scopes, so for those this is a warning instead.
 - Working tree clean. Uncommitted changes would be swept into the first worktree.
 - Remote reachable, and the base branch resolved from `gh repo view --json defaultBranchRef`.
   Never assume `main`.

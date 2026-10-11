@@ -39,8 +39,15 @@ git rev-parse --is-inside-work-tree >/dev/null 2>&1 \
 if ! gh auth status >/dev/null 2>&1; then
   fatal+=("\`gh\` is not authenticated. Run \`gh auth login\`.")
 else
-  gh auth status 2>&1 | grep -q "'repo'" \
-    || warn+=("\`gh\` token may lack the \`repo\` scope; issue comments and PR creation could fail.")
+  # Classic tokens list their scopes; fine-grained and app tokens print
+  # "none" or nothing, so absence there is unknowable rather than missing.
+  scopes=$(gh auth status --active 2>&1 | grep 'Token scopes:' | head -1)
+  if printf '%s' "$scopes" | grep -q "'"; then
+    printf '%s' "$scopes" | grep -q "'repo'" \
+      || fatal+=("\`gh\` token lacks the \`repo\` scope; issue comments and PR creation will fail. Run \`gh auth refresh -s repo\`.")
+  else
+    warn+=("Could not read \`gh\` token scopes (fine-grained or app token?); confirm it can comment on issues and open PRs.")
+  fi
 fi
 
 # A dirty tree would be swept into the first worktree and land in someone's PR.
