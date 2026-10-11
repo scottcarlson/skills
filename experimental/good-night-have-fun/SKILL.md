@@ -308,6 +308,18 @@ the path**. Schema:
 }
 ```
 
+Route on `status`: `green` goes to [§2.4](#24-merge-one-at-a-time), `failed` to
+[§2.6](#26-failure-protocol). **`needs_human`** — the ticket hit something only a person can
+decide — is neither:
+
+- Push the ticket branch if it has commits, so the human starts from the partial work, then remove
+  the worktree.
+- `ledger.sh set` the status to `"needs_human"`, and carry `failure_reason` into the summary's
+  **Needs you** section as the question to answer.
+- Do not retry it; a second attempt cannot answer a question the first could not. Its subtree
+  waits, exactly as for a ticket triaged `NEEDS_HUMAN` in [§1.6](#16-triage-and-size) — `ready`
+  never offers a ticket whose blocker has not merged.
+
 ### 2.4 Merge, one at a time
 
 Never merge two tickets at once. Merge inside `wt-integration`. For each green ticket, in order:
