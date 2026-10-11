@@ -29,7 +29,8 @@ fail() { printf 'FATAL: %s\n' "$1" >&2; exit 1; }
 # mentions the spec shows up — so the `Spec: #N` body check below is required,
 # not belt-and-braces.
 gh api "repos/$REPO/issues/$SPEC/timeline?per_page=100" --paginate \
-  --jq '.[] | select(.event=="cross-referenced") | select(.source.issue.pull_request==null) | .source.issue.number' \
+  --jq '.[] | select(.event=="cross-referenced") | select(.source.issue.pull_request==null)
+         | select(.source.issue.repository.full_name=="'"$REPO"'") | .source.issue.number' \
   2>/dev/null | sort -n -u > "$W/children.txt" \
   || fail "could not read the timeline for #$SPEC"
 
@@ -46,8 +47,12 @@ skip_notready=()
 while read -r n; do
   # `< /dev/null` is load-bearing: gh otherwise eats this loop's stdin and the
   # loop exits after one iteration.
+  #
+  # A failed fetch is fatal, not a skip: dropping the ticket yields a graph that
+  # looks valid while silently missing work and the edges through it.
   gh issue view "$n" -R "$REPO" \
-    --json number,title,state,labels,body < /dev/null > "$W/i$n.json" 2>/dev/null || continue
+    --json number,title,state,labels,body < /dev/null > "$W/i$n.json" 2>"$W/err" \
+    || fail "could not fetch cross-referenced issue #$n: $(head -1 "$W/err")"
 
   # Two filters. `ready-for-agent` alone sweeps in unrelated issues elsewhere in
   # the repo; the cross-reference alone sweeps in anything that mentions the
@@ -125,7 +130,13 @@ while read -r from to; do
     printf '%s %s\n' "$from" "$to" >> "$W/edges_internal.txt"
     continue
   fi
-  st=$(gh issue view "$from" -R "$REPO" --json state --jq '.state' < /dev/null 2>/dev/null) || st=""
+  # Only a definite "no such issue" means the blocker does not exist. Anything
+  # else (rate limit, network, auth) is a fetch failure and is reported as one.
+  if ! st=$(gh issue view "$from" -R "$REPO" --json state --jq '.state' < /dev/null 2>"$W/err"); then
+    grep -q 'Could not resolve to an issue' "$W/err" \
+      || fail "could not fetch blocker #$from of issue #$to: $(head -1 "$W/err")"
+    st=""
+  fi
   case "$st" in
     CLOSED)
       : ;;                                        # satisfied; drop the edge
