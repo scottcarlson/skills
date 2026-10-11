@@ -65,7 +65,9 @@ else
   fatal+=("Could not resolve the default branch from \`gh repo view\`.")
 fi
 
+# graph.sh needs owner/repo; an empty value would only surface after hand-over.
 repo=$(gh repo view --json nameWithOwner --jq '.nameWithOwner' 2>/dev/null) || repo=""
+[ -n "$repo" ] || fatal+=("Could not resolve owner/repo from \`gh repo view\`.")
 
 git worktree list >/dev/null 2>&1 \
   || fatal+=("\`git worktree\` is unavailable; this git is too old.")
