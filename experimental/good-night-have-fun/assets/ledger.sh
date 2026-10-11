@@ -34,15 +34,22 @@ case "$cmd" in
              number, title, phase,
              status: "pending",
              blocked_by: [],
+             external_blocked_by: [],
              attempts: 0,
              model: null,
              branch: null,
              envelope: null
            }}) | from_entries),
-         edges
+         edges,
+         external_blocks: (.external_blocks // [])
        }
        | .tickets = (reduce .edges[] as $e (.tickets;
-           .[$e.blocks|tostring].blocked_by += [$e.blocked]))' \
+           .[$e.blocks|tostring].blocked_by += [$e.blocked]))
+       # An open blocker outside this run never merges, so the ticket can never
+       # become ready. Mark it now; `ready` then holds its whole subtree too.
+       | .tickets = (reduce .external_blocks[] as $x (.tickets;
+           .[$x.ticket|tostring] |= (.status = "blocked_external"
+                                     | .external_blocked_by += [$x.blocked_by])))' \
       "$graph" > "$L"
     printf '%s\n' "$L"
     ;;
@@ -69,7 +76,7 @@ case "$cmd" in
     jq -r '[.tickets[].status]
       | ((map(select(. == "merged")) | length | tostring) + " shipped · ")
       + ((map(select(. == "failed")) | length | tostring) + " failed · ")
-      + ((map(select(. == "needs_human" or . == "blocked_by_failure")) | length | tostring) + " need you")' "$L"
+      + ((map(select(. == "needs_human" or . == "blocked_by_failure" or . == "blocked_external")) | length | tostring) + " need you")' "$L"
     ;;
 
   *) printf 'unknown subcommand: %s\n' "$cmd" >&2; exit 2 ;;
