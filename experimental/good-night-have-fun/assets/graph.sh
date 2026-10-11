@@ -201,15 +201,16 @@ fi
 #    they disagree, one is wrong and there is no way to tell which at 3am.
 #    A phase we do not recognise ranks as empty and is skipped: an unknown tag
 #    is not evidence of a contradiction, and this check must never invent one.
+# PR<n> ranks 10n, so every numbered phase stays ordered against every other.
+# A gate sits just after the first PR it names ("the gate between PR1 and PR2"
+# ranks 15), and cleanup runs after everything. Both are matched before the PR
+# number because their tags may name a PR.
 phase_rank() {
+  pr=$(printf '%s' "$1" | grep -oE 'PR[0-9]+' | head -1 | tr -d 'PR')
   case "$1" in
-    *cleanup*)   echo 5 ;;   # matched before PR2 — "cleanup" tags may name a PR
-    *gate*)      echo 2 ;;   # e.g. "the gate between PR1 and PR2"
-    *PR[1-9][0-9]*) echo 4 ;; # PR10 and up; before PR1, which would match PR10
-    *PR1*)       echo 1 ;;
-    *PR2*)       echo 3 ;;
-    *PR[3-9]*)   echo 4 ;;
-    *)           echo ""  ;;
+    *cleanup*) echo 1000000 ;;
+    *gate*)    echo $(( 10#${pr:-1} * 10 + 5 )) ;;
+    *)         [ -n "$pr" ] && echo $(( 10#$pr * 10 )) || echo "" ;;
   esac
 }
 while read -r from to; do
