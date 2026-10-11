@@ -151,10 +151,13 @@ while read -r from to; do
 done < <(sort -u "$W/edges.txt")
 mv "$W/edges_internal.txt" "$W/edges.txt"
 
-# 4. Topological sort. tsort fails loudly on a cycle.
+# 4. Topological sort. GNU tsort exits non-zero on a cycle; BSD tsort (macOS)
+#    only warns "cycle in data" and exits 0, so stderr output counts as a cycle.
 jq -r '.number | "ROOT \(.)"' "$W/nodes.jsonl" > "$W/roots.txt"
-order=$(cat "$W/edges.txt" "$W/roots.txt" | tsort 2>"$W/tsort.err" | grep -v '^ROOT$') \
-  || fail "the dependency graph contains a cycle: $(tr '\n' ' ' < "$W/tsort.err")"
+order=$(cat "$W/edges.txt" "$W/roots.txt" | tsort 2>"$W/tsort.err" | grep -v '^ROOT$')
+if [ $? -ne 0 ] || [ -s "$W/tsort.err" ]; then
+  fail "the dependency graph contains a cycle: $(tr '\n' ' ' < "$W/tsort.err")"
+fi
 
 # 5. Phase tags and blocking edges encode the same constraint independently. If
 #    they disagree, one is wrong and there is no way to tell which at 3am.
