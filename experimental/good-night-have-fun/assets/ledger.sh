@@ -62,8 +62,16 @@ case "$cmd" in
   set)
     t="${3:?ticket required}"; field="${4:?field required}"; value="${5:?value required}"
     tmp=$(mktemp)
-    jq --arg t "$t" --arg f "$field" --argjson v "$value" \
-      '.tickets[$t][$f] = $v' "$L" > "$tmp" && mv "$tmp" "$L"
+    # Reject what would silently corrupt the run: a ticket that is not in the
+    # graph (it would appear in tally) or a status nothing downstream knows.
+    jq --arg t "$t" --arg f "$field" --argjson v "$value" '
+      if .tickets[$t] == null then error("unknown ticket: \($t)")
+      elif $f == "status" and ($v | IN("pending", "merged", "failed", "needs_human",
+                                       "blocked_by_failure", "blocked_external") | not)
+        then error("unknown status: \($v)")
+      else .tickets[$t][$f] = $v end' "$L" > "$tmp" \
+      || { rm -f "$tmp"; exit 1; }
+    mv "$tmp" "$L"
     ;;
 
   ready)
