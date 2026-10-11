@@ -20,6 +20,7 @@ W=$(mktemp -d)
 trap 'rm -rf "$W"' EXIT
 
 fail() { printf 'FATAL: %s\n' "$1" >&2; exit 1; }
+case "$SPEC" in ''|*[!0-9]*) fail "spec must be an issue number, got '$SPEC'" ;; esac
 
 # 1. Discover children.
 #
@@ -64,7 +65,7 @@ while read -r n; do
   # so anchoring on a `Spec:` prefix silently finds zero children on older
   # repos, which is indistinguishable from "this spec has no work".
   parent=$(jq -r '.body' "$W/i$n.json" | awk '/^## Parent/{f=1;next} /^## /{f=0} f')
-  printf '%s' "$parent" | grep -qE "#$SPEC\b" || { skip_notparent+=("$n"); continue; }
+  printf '%s' "$parent" | grep -qE "#${SPEC}([^0-9]|\$)" || { skip_notparent+=("$n"); continue; }
 
   [ "$(jq -r '.state' "$W/i$n.json")" = "OPEN" ] || { skip_closed+=("$n"); continue; }
   jq -e '.labels | map(.name) | index("ready-for-agent")' "$W/i$n.json" >/dev/null \
