@@ -62,6 +62,14 @@ preflight, and it means improvements arrive for free.
 symlinks, a code review per ticket, the gate re-run after every merge. An overnight run has hours
 and hours to spare and very little context to spare, so every trade goes the same way.
 
+**A staged deploy finishes each phase before starting the next.** A stacked PR needs a commit where
+one phase ends and the next begins. Tickets that merge in graph order interleave phases and leave no
+such commit, so the run offers only the earliest unfinished phase and branches at its last commit
+before the next one starts. That costs some parallelism at each boundary, and a phase with a slow
+ticket holds the next phase back until it finishes. A stuck ticket does not hold it back, because it
+fails or prunes out instead. The alternative, one PR the human splits by hand every morning, costs
+more than a few idle slots overnight.
+
 ## When not to use it
 
 - **When the tickets have not been through `/to-tickets`.** No `## Blocked by` sections means no

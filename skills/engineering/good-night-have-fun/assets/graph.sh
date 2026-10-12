@@ -222,8 +222,28 @@ while read -r from to; do
   #$from (phase rank $pf), which runs later. One of the two is wrong; resolve it before starting."
 done < <(sort -u "$W/edges.txt")
 
+# 6. More than one distinct phase rank means a staged deploy: one stacked PR per
+#    phase (SKILL.md §3.1). Every ticket must then land in a known phase. An
+#    untagged or unrecognised ticket has no PR to belong to, and guessing one
+#    could ship a deletion before the addition it replaces.
+: > "$W/ranks.jsonl"
+while read -r n; do
+  r=$(phase_rank "$(jq -r --argjson n "$n" 'select(.number==$n) | .phase' "$W/nodes.jsonl" | head -1)")
+  jq -nc --argjson n "$n" --arg r "$r" \
+    '{number: $n, phase_rank: (if $r == "" then null else ($r|tonumber) end)}' >> "$W/ranks.jsonl"
+done < <(jq -r '.number' "$W/nodes.jsonl")
+staged=$(jq -s '[.[].phase_rank | select(. != null)] | unique | length > 1' "$W/ranks.jsonl")
+if [ "$staged" = true ]; then
+  unranked=$(jq -rs '[.[] | select(.phase_rank == null) | "#\(.number)"] | join(" ")' "$W/ranks.jsonl")
+  [ -z "$unranked" ] \
+    || fail "this spec is a staged deploy (more than one phase), but these tickets have no recognised
+  phase tag in their ## Parent line: $unranked. Tag each one (e.g. **PR1**, **cleanup**) before starting."
+fi
+
 jq -n \
-  --argjson nodes "$(jq -s '.' "$W/nodes.jsonl")" \
+  --argjson nodes "$(jq -s '(.[0] | map({(.number|tostring): .phase_rank}) | add) as $r
+                            | .[1] | map(. + {phase_rank: $r[.number|tostring]})' \
+                       <(jq -s '.' "$W/ranks.jsonl") <(jq -s '.' "$W/nodes.jsonl"))" \
   --argjson edges "$(awk '{printf "{\"ticket\":%s,\"blocked_by\":%s}\n", $2, $1}' "$W/edges.txt" | jq -s 'unique')" \
   --argjson order "$(printf '%s\n' "$order" | jq -R . | jq -s 'map(select(. != "") | tonumber)')" \
   --argjson external "$(awk '{printf "{\"ticket\":%s,\"blocked_by\":%s}\n", $1, $2}' "$W/external_blocks.txt" | jq -s 'unique')" \

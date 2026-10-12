@@ -143,6 +143,9 @@ saying there are none. Any other non-blank line is a hard fail rather than a gue
   `**PR2**`, `**cleanup**`, and so on. Phase order and `## Blocked by` encode the same constraint
   from two angles, and they are written by hand independently. If an edge runs backwards against
   phase order, one of the two is wrong and there is no way to tell which at 3am. Stop.
+- **An untagged ticket in a staged spec.** More than one distinct phase means a staged deploy, one
+  stacked PR per phase ([§3.1](#31-branches-and-prs)). A ticket with no recognised phase tag has no
+  PR to land in, and guessing one could ship a deletion before the addition it replaces.
 
 A blocker that sits *outside* the graph is **not** an error, and this distinction matters because
 specs are routinely half-worked:
@@ -267,8 +270,23 @@ runaway to guard against and therefore no wave cap. Keep going until the graph i
 
 ### 2.1 Dispatch a wave
 
-Take up to **3** tickets from `assets/ledger.sh ready <run-dir>` — pending, every blocker merged.
-For each, in parallel:
+First, record any phase that just finished. Inside `wt-integration`:
+
+```bash
+assets/ledger.sh close <run-dir> "$(git rev-parse HEAD)"
+```
+
+It does nothing unless the spec is a staged deploy and a phase has run out of pending tickets. Then
+it creates that phase's boundary branch itself, and only records the phase as closed once the
+branch exists at the boundary. If it fails, stop dispatching and go to [§3.2](#32-the-summary),
+leading with its error: the ledger is unchanged, so `ready` will refuse the next phase anyway.
+Then take up to **3** tickets from `assets/ledger.sh ready <run-dir>` — pending, every blocker
+merged. In a staged run `ready` only offers the earliest phase that still has pending tickets, so
+a phase's boundary is a single commit with nothing from a later phase beneath it. It errors if a
+finished phase was never closed, rather than letting the next phase merge over the boundary. When
+`ready` returns nothing, the graph is exhausted: run `close` once more and go to Landing.
+
+For each ticket, in parallel:
 
 ```bash
 git worktree add .ig.good-night/gh-<spec>-<slug>/wt-<n> -b gnhf/<spec>/<n>-<slug> <integration-branch>
@@ -395,20 +413,38 @@ the integration branch has no commits over the base, GitHub rejects a PR with no
 `gh pr create` must not stop the run before the summary is written. Go straight to
 [§3.2](#32-the-summary), which says why nothing shipped.
 
-Push the integration branch `gnhf/<spec>-<slug>`. Open **one PR** against the base branch resolved
-in preflight.
+**Unless the spec is a staged deploy** (`staged` in the ledger), push the integration branch
+`gnhf/<spec>-<slug>` and open **one PR** against the base branch resolved in preflight.
 
-**Unless the spec demands staged deploys** — signalled by distinct phase tags in the tickets'
-`## Parent` lines, e.g. an additive phase, then a gate, then a behavioural phase, then a contract
-phase that deletes the old path. That is rare. When it happens, open one stacked PR per phase, each
-based on the previous, because shipping a deletion in the same PR as the addition it replaces is a
-deploy hazard rather than a review inconvenience.
+A staged deploy is more than one distinct phase among the tickets' `## Parent` tags — e.g. an
+additive phase, then a gate, then a behavioural phase, then a contract phase that deletes the old
+path. Shipping a deletion in the same deploy as the addition it replaces is a deploy hazard rather
+than a review inconvenience, so open **one stacked PR per phase**. The boundaries already exist:
+§2.1 closed each phase before the next began and created a `gnhf/<spec>-<slug>-phase-<k>` branch at
+its last commit. `assets/ledger.sh phases <run-dir>` prints one line per PR, in merge order:
 
-Create the PR with a placeholder body. Then call the Skill tool with `"pr-description"`, passing the
+```
+<k>	<phase tags>	<head branch>	<base branch>
+```
+
+Push every head branch, then open each PR with that head and base. The first is based on the base
+branch; each later one on the phase before it. A phase where nothing merged has no branch and no
+PR, and the next phase stacks on the last one that shipped. Title each PR with its phase tags.
+
+Create each PR with a placeholder body. Then call the Skill tool with `"pr-description"`, passing the
 new PR id. It posts without asking, which is what this run wants. It requires the PR to exist first
 — a description cannot be generated for a PR that has not been opened.
 
-Add the `⚠️ UNVERIFIED` stamp to the PR body for any ungated ticket.
+Add the `⚠️ UNVERIFIED` stamp to the PR body for any ungated ticket. In a staged run, do this per
+PR, and also open each stacked PR's body — after `pr-description` has written it — with:
+
+```
+Stacked PR <k> of <n> — merge in order. Based on <base branch>; retarget to the base branch and
+rebase once the PR below it merges.
+```
+
+Call out a phase that shipped only some of its tickets in that PR's body, naming the missing
+tickets — the next phase was built and gated without them.
 
 ### 3.2 The summary
 
@@ -422,7 +458,8 @@ Order matters. **Lead with what needs a human, not with what went well:**
 2. **Failed** — ticket, what was tried, the exact error, what was reverted.
 3. **Decisions made autonomously** — question, decision, why. Grouped by ticket.
 4. **Shipped** — ticket, one line, review findings.
-5. **PR links**, and any `⚠️ UNVERIFIED` tickets.
+5. **PR links**, and any `⚠️ UNVERIFIED` tickets. In a staged run, one line per stacked PR in
+   merge order, with its phase tags and the tickets it carries.
 
 Keep it scannable. It is read by someone holding a coffee, not debugging.
 
@@ -433,6 +470,8 @@ Send one push notification with the tally from `assets/ledger.sh tally <run-dir>
 ```
 9 shipped · 2 failed · 3 need you · PR #401
 ```
+
+A staged run lists every stacked PR in merge order: `· PRs #401 → #402 → #403`.
 
 One notification, at the end, only. Never notify mid-run: nothing that happens at 3am is actionable
 at 3am, and a phone buzzing about a ticket the run already reverted and moved past is worse than

@@ -13,6 +13,8 @@
 #   ledger.sh set    <dir> <ticket> <field> <value>   # value is JSON
 #   ledger.sh ready  <dir>                            # tickets whose blockers are all merged
 #   ledger.sh prune  <dir> <ticket>                   # mark its pending dependents blocked
+#   ledger.sh close  <dir> <integration-sha>          # staged: branch finished phases' boundaries
+#   ledger.sh phases <dir>                            # staged: "<k> <tags> <head> <base>" per PR
 #   ledger.sh tally  <dir>                            # one-line summary counts
 
 set -uo pipefail
@@ -48,10 +50,20 @@ case "$cmd" in
          base_branch: $base,
          integration_branch: $integ,
          started_at: (now | todate),
+         # More than one phase rank is a staged deploy: one stacked PR per
+         # phase, so the run finishes a phase before starting the next.
+         staged: ([.nodes[].phase_rank | select(. != null)] | unique | length > 1),
+         phases: (.nodes as $ns
+           | [.nodes[].phase_rank | select(. != null)] | unique
+           | if length > 1 then to_entries | map(.value as $rk | {
+               index: (.key + 1), rank: $rk,
+               tags: ([$ns[] | select(.phase_rank == $rk) | .phase] | unique | join(" / ")),
+               closed: false, merged: 0, sha: null, branch: null })
+             else [] end),
          tickets: (.nodes | map({
            key: (.number|tostring),
            value: {
-             number, title, phase,
+             number, title, phase, phase_rank,
              status: "pending",
              blocked_by: [],
              external_blocked_by: [],
@@ -115,12 +127,81 @@ case "$cmd" in
   ready)
     # A ticket is ready when it is pending and every blocker has merged.
     # Emitted in topological order, so "take up to 3" takes the earliest.
+    # In a staged run only the earliest phase with pending work is offered: a
+    # phase's boundary is a commit, and it only exists if nothing from a later
+    # phase merges before the phase finishes.
     jq -r '
       .tickets as $t
+      | (if .staged then [ $t[] | select(.status == "pending") | .phase_rank ] | min
+         else null end) as $open
+      | if $open != null and any(.phases[]; .rank < $open and (.closed | not))
+        then error("a finished phase has no recorded boundary; run ledger.sh close first")
+        else . end
       | .order[] | $t[tostring]
       | select(.status == "pending")
+      | select($open == null or .phase_rank == $open)
       | select([ .blocked_by[] | $t[tostring].status ] | all(. == "merged"))
       | .number' "$L"
+    ;;
+
+  close)
+    # Run inside wt-integration with its head, before every wave and once before
+    # landing. Closes, in order, each phase with no pending ticket left, and
+    # creates a boundary branch at the head for each one where something merged.
+    # Prints "<branch> <sha>" for each branch it created. A phase where nothing
+    # merged gets no branch and no PR.
+    sha="${3:?integration sha required}"
+    case "$sha" in *[!0-9a-f]*|'') printf 'sha must be hex, got %s\n' "$sha" >&2; exit 2 ;; esac
+    [ ${#sha} -eq 40 ] || { printf 'sha must be the full 40-character sha, got %s\n' "$sha" >&2; exit 2; }
+    git rev-parse --verify -q "$sha^{commit}" >/dev/null \
+      || { printf 'FATAL: %s is not a commit in this repository; run close inside wt-integration\n' "$sha" >&2; exit 1; }
+    tmp=$(mktemp)
+    jq --arg sha "$sha" '
+      reduce range(0; .phases | length) as $i (.;
+        .phases[$i].rank as $r
+        | if .phases[$i].closed then .
+          elif (.phases[:$i] | all(.closed))
+               and ([ .tickets[] | select(.phase_rank == $r and .status == "pending") ] | length == 0)
+          then ([ .tickets[] | select(.phase_rank == $r and .status == "merged") ] | length) as $m
+            | .phases[$i] += { closed: true, merged: $m,
+                               sha: (if $m > 0 then $sha else null end),
+                               branch: (if $m > 0 then "\(.integration_branch)-phase-\(.phases[$i].index)"
+                                        else null end) }
+          else . end)' "$L" > "$tmp" \
+      || { rm -f "$tmp"; exit 1; }
+    new=$(jq -r --slurpfile old "$L" '
+      ($old[0].phases | map(select(.closed) | .index)) as $was
+      | .phases[] | select(.closed and .branch != null and (.index | IN($was[]) | not))
+      | "\(.branch) \(.sha)"' "$tmp") || { rm -f "$tmp"; exit 1; }
+    # Create every ref before recording any phase as closed. A phase marked
+    # closed is never emitted again, so a ledger that runs ahead of git would
+    # land a stacked PR from a missing or stale branch. A branch already at the
+    # boundary is accepted, so a close that failed halfway can simply be re-run.
+    while read -r b bsha; do
+      [ -n "$b" ] || continue
+      if cur=$(git rev-parse --verify -q "refs/heads/$b"); then
+        [ "$cur" = "$bsha" ] || { rm -f "$tmp"; printf 'FATAL: %s already exists at %s, not at the phase boundary %s. Delete it and re-run close; the ledger is unchanged.\n' "$b" "$cur" "$bsha" >&2; exit 1; }
+      else
+        git branch "$b" "$bsha" \
+          || { rm -f "$tmp"; printf 'FATAL: could not create %s at %s; the ledger is unchanged.\n' "$b" "$bsha" >&2; exit 1; }
+      fi
+    done <<< "$new"
+    mv "$tmp" "$L" || { rm -f "$tmp"; printf 'FATAL: could not write %s\n' "$L" >&2; exit 1; }
+    [ -z "$new" ] || printf '%s\n' "$new"
+    ;;
+
+  phases)
+    # One line per stacked PR, in merge order: index, tags, head, base. Each PR
+    # is based on the previous phase that shipped anything, the first on the
+    # base branch.
+    jq -r '
+      if any(.phases[]; .closed | not)
+      then error("unclosed phase; run ledger.sh close with the integration head first")
+      else . end
+      | .base_branch as $b
+      | reduce (.phases[] | select(.branch != null)) as $p ({base: $b, out: []};
+          .out += [ "\($p.index)\t\($p.tags)\t\($p.branch)\t\(.base)" ] | .base = $p.branch)
+      | .out[]' "$L"
     ;;
 
   tally)
