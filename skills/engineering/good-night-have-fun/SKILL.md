@@ -396,13 +396,20 @@ the integration branch has no commits over the base, GitHub rejects a PR with no
 [§3.2](#32-the-summary), which says why nothing shipped.
 
 Push the integration branch `gnhf/<spec>-<slug>`. Open **one PR** against the base branch resolved
-in preflight.
+in preflight. Always one, even when the spec asks for staged deploys.
 
-**Unless the spec demands staged deploys** — signalled by distinct phase tags in the tickets'
-`## Parent` lines, e.g. an additive phase, then a gate, then a behavioural phase, then a contract
-phase that deletes the old path. That is rare. When it happens, open one stacked PR per phase, each
-based on the previous, because shipping a deletion in the same PR as the addition it replaces is a
-deploy hazard rather than a review inconvenience.
+Staged deploys are signalled by more than one distinct phase tag among the merged tickets'
+`## Parent` lines — e.g. an additive phase, then a gate, then a behavioural phase, then a contract
+phase that deletes the old path. Shipping a deletion in the same deploy as the addition it replaces
+is a deploy hazard, so the human has to split this PR before it ships. The run does not split it:
+tickets merge in graph order, not phase order, so phases interleave on the integration branch and
+there is no commit where one phase ends and the next begins. Stacked PRs are deliberately out of
+scope for v1. When the merged tickets carry more than one phase, open the PR body with:
+
+```
+⚠️ STAGED DEPLOY — this spec asks for one deploy per phase. Split this PR before shipping;
+see the phase breakdown in the run summary.
+```
 
 Create the PR with a placeholder body. Then call the Skill tool with `"pr-description"`, passing the
 new PR id. It posts without asking, which is what this run wants. It requires the PR to exist first
@@ -423,6 +430,9 @@ Order matters. **Lead with what needs a human, not with what went well:**
 3. **Decisions made autonomously** — question, decision, why. Grouped by ticket.
 4. **Shipped** — ticket, one line, review findings.
 5. **PR links**, and any `⚠️ UNVERIFIED` tickets.
+6. **Phase breakdown** — only when the PR carries the `⚠️ STAGED DEPLOY` stamp. The merged tickets
+   grouped by the `phase` field in the ledger, in phase order, each with its pushed ticket branch,
+   so the human can split the PR by phase without reconstructing which commit belongs where.
 
 Keep it scannable. It is read by someone holding a coffee, not debugging.
 
