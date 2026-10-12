@@ -273,12 +273,13 @@ runaway to guard against and therefore no wave cap. Keep going until the graph i
 First, record any phase that just finished. Inside `wt-integration`:
 
 ```bash
-assets/ledger.sh close <run-dir> "$(git rev-parse HEAD)" | while read -r branch sha; do
-  git branch "$branch" "$sha"
-done
+assets/ledger.sh close <run-dir> "$(git rev-parse HEAD)"
 ```
 
-It prints nothing unless the spec is a staged deploy and a phase has run out of pending tickets.
+It does nothing unless the spec is a staged deploy and a phase has run out of pending tickets. Then
+it creates that phase's boundary branch itself, and only records the phase as closed once the
+branch exists at the boundary. If it fails, stop dispatching and go to [§3.2](#32-the-summary),
+leading with its error: the ledger is unchanged, so `ready` will refuse the next phase anyway.
 Then take up to **3** tickets from `assets/ledger.sh ready <run-dir>` — pending, every blocker
 merged. In a staged run `ready` only offers the earliest phase that still has pending tickets, so
 a phase's boundary is a single commit with nothing from a later phase beneath it. It errors if a

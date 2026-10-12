@@ -13,7 +13,7 @@
 #   ledger.sh set    <dir> <ticket> <field> <value>   # value is JSON
 #   ledger.sh ready  <dir>                            # tickets whose blockers are all merged
 #   ledger.sh prune  <dir> <ticket>                   # mark its pending dependents blocked
-#   ledger.sh close  <dir> <integration-sha>          # staged: record finished phases' boundaries
+#   ledger.sh close  <dir> <integration-sha>          # staged: branch finished phases' boundaries
 #   ledger.sh phases <dir>                            # staged: "<k> <tags> <head> <base>" per PR
 #   ledger.sh tally  <dir>                            # one-line summary counts
 
@@ -145,13 +145,16 @@ case "$cmd" in
     ;;
 
   close)
-    # Call with the integration head before every wave and once before landing.
-    # Closes, in order, each phase with no pending ticket left, recording the
-    # head as its boundary. Prints "<branch> <sha>" for each boundary the caller
-    # must create; a phase where nothing merged gets no branch and no PR.
+    # Run inside wt-integration with its head, before every wave and once before
+    # landing. Closes, in order, each phase with no pending ticket left, and
+    # creates a boundary branch at the head for each one where something merged.
+    # Prints "<branch> <sha>" for each branch it created. A phase where nothing
+    # merged gets no branch and no PR.
     sha="${3:?integration sha required}"
     case "$sha" in *[!0-9a-f]*|'') printf 'sha must be hex, got %s\n' "$sha" >&2; exit 2 ;; esac
     [ ${#sha} -eq 40 ] || { printf 'sha must be the full 40-character sha, got %s\n' "$sha" >&2; exit 2; }
+    git rev-parse --verify -q "$sha^{commit}" >/dev/null \
+      || { printf 'FATAL: %s is not a commit in this repository; run close inside wt-integration\n' "$sha" >&2; exit 1; }
     tmp=$(mktemp)
     jq --arg sha "$sha" '
       reduce range(0; .phases | length) as $i (.;
@@ -170,6 +173,19 @@ case "$cmd" in
       ($old[0].phases | map(select(.closed) | .index)) as $was
       | .phases[] | select(.closed and .branch != null and (.index | IN($was[]) | not))
       | "\(.branch) \(.sha)"' "$tmp") || { rm -f "$tmp"; exit 1; }
+    # Create every ref before recording any phase as closed. A phase marked
+    # closed is never emitted again, so a ledger that runs ahead of git would
+    # land a stacked PR from a missing or stale branch. A branch already at the
+    # boundary is accepted, so a close that failed halfway can simply be re-run.
+    while read -r b bsha; do
+      [ -n "$b" ] || continue
+      if cur=$(git rev-parse --verify -q "refs/heads/$b"); then
+        [ "$cur" = "$bsha" ] || { rm -f "$tmp"; printf 'FATAL: %s already exists at %s, not at the phase boundary %s. Delete it and re-run close; the ledger is unchanged.\n' "$b" "$cur" "$bsha" >&2; exit 1; }
+      else
+        git branch "$b" "$bsha" \
+          || { rm -f "$tmp"; printf 'FATAL: could not create %s at %s; the ledger is unchanged.\n' "$b" "$bsha" >&2; exit 1; }
+      fi
+    done <<< "$new"
     mv "$tmp" "$L" || { rm -f "$tmp"; printf 'FATAL: could not write %s\n' "$L" >&2; exit 1; }
     [ -z "$new" ] || printf '%s\n' "$new"
     ;;
