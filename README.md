@@ -1,153 +1,164 @@
-# Scott Carlson's Skills
+# 🛠️ Scott Carlson's Skills
 
-Eight Claude Code skills for getting real work through a delivery pipeline without wrecking the
-context window on the way.
+Ten Claude Code skills for getting real work through a delivery pipeline — by hand or overnight —
+without wrecking the context window on the way.
 
-They are **connective tissue around [Matt Pocock's skills](https://github.com/mattpocock/skills)**,
-not a replacement for them — they fill the gaps at the front (getting real-world context in cheaply),
-the middle (capturing rationale before a reset destroys it), and the back (PR hygiene). His skills do
+They're **connective tissue around [Matt Pocock's skills](https://github.com/mattpocock/skills)**,
+not a replacement. They fill the gaps at the front (cheap real-world context), the middle (rationale
+captured before a reset destroys it), the back (PR hygiene), and the overnight run. His skills do
 the planning and the building. **Install his first.**
 
 ---
 
-## The premise everything here is built on
+## 🧠 The premise
 
-A model's *usable* intelligence degrades well before its context window fills. On a large-window
-model, the smart zone is roughly the first **~100K tokens**. Past that you still get answers — they're
-just worse. The million-token window didn't fix this; it shipped a lot more room to be bad in.
+A model's *usable* intelligence degrades well before its context window fills — roughly past the
+first **~100K tokens**. You still get answers; they're just worse. Two rules fall out, and they're
+the design DNA of every skill here:
 
-Two rules fall out, and they are the design DNA of every skill in this repo:
+1. **Raw material never enters the main window.** Ticket exports, Figma frames, screenshots, diffs —
+   a subagent reads them, writes the payload to disk, and returns a short digest.
+2. **Reset aggressively, and know which reset.** `/compact` keeps a lossy summary (continuity).
+   `/clear` keeps nothing (the next step reads from disk).
 
-**1. Raw material never enters the main window.** Ticket exports, Figma frames, screenshots,
-transcripts, long diffs — a subagent reads them, writes the payload to disk, and returns a short
-digest. The digest is what the main session sees.
+If that sounds like overkill, you haven't hit the wall yet. Every prohibition in these skills exists
+because the polite version got rationalised away in the moment.
 
-**2. Reset aggressively, and know which reset.** `/compact` keeps a lossy summary, so rationale
-survives. `/clear` keeps nothing. Compact when the next step needs continuity; clear when the next
-step reads from artifacts on disk.
+## 🚦 The pipeline
 
-If those two rules sound like overkill, that's the tell that you haven't hit the wall yet. Every
-prohibition in these skills — and `jira-intake` in particular is written as a prohibition, not a
-preference — exists because the polite version got rationalised away in the moment.
-
-## The pipeline
+Intake, planning, and ticketing are the same either way. **You pick how the tickets get worked** —
+`/jira-intake` asks up front, because an overnight run changes how planning has to be done.
 
 ```
-/jira-intake ABC-123 "framing"        ← here.   Entry point for new work.
-        │   fans out parallel subagents — ticket / Figma / images / notes
-        │   payloads land on disk, a <30-line brief comes back
+/jira-intake ABC-123 "framing"        ← here.   Asks: manual run, or GNHF?
+        │   parallel subagents — ticket / Figma / images / notes → disk
+        │   a <30-line brief comes back
         ▼
 /compact                               the pipeline's only compact
-        │   ↳ switch to Opus at high/xhigh — planning is under-determined work
+        │   ↳ switch to Opus at high/xhigh
         ▼
 /grill-with-docs   or   /wayfinder    ← mattpocock/skills.  Planning.
         ▼
 /to-spec  →  /to-tickets              ← mattpocock/skills.  Tracer-bullet slices.
-        │   write any missing ADRs now — jira-intake's handoff reminder, before the reset
+        │   write any missing ADRs now, before the reset
+        │   GNHF run? Tickets must be finishable with no human in the loop.
         ▼
 /clear
         │
-   ┌────┴────────────────── per unblocked slice ───────────────────────┐
-   │  /where-am-i [spec#]   ← here.   Which slice, and what's HITL.    │
-   │  /pre-implement <N>    ← here.   Model + effort.                  │
-   │  /clear                                                           │
-   │  /implement "GitHub issue #<N>"   ← mattpocock/skills.            │
-   │  /clear                                                           │
-   │  /code-review          ← mattpocock/skills.                       │
-   └───────────────────────────────────────────────────────────────────┘
+   ┌────┴─────── PATH A · manual ────────┐   ┌──────── PATH B · overnight ────────┐
+   │ per unblocked slice:                │   │ /good-night-have-fun               │
+   │  /where-am-i      which slice?      │   │     "GitHub issue #<spec>"         │
+   │  /pre-implement N model + effort    │   │                                    │
+   │  /clear                             │   │  preflight (you're awake) → walk   │
+   │  /implement N     ← mattpocock      │   │  away → waves of ≤3 tickets in     │
+   │  /clear                             │   │  worktrees → gate → merge → one PR │
+   │  /code-review     ← mattpocock      │   │                                    │
+   └─────────────────────────────────────┘   │  morning: read SUMMARY.md          │
+                                             └────────────────────────────────────┘
         ▼
 /pr-description   and/or   /pr-review  ← here.   Post-PR.
 ```
 
-**There is deliberately no conductor skill.** A wrapper holding the whole pipeline in context was
-built and retired: standing policy belongs in `CLAUDE.md`, and paying tokens on every invocation to
-restate something always true is the anti-pattern this repo is about. Instead, **every skill ends by
-naming the next command and the reset that precedes it.** That's what makes a typed pipeline work
-without anything orchestrating it.
+### 🌙 Path B in a nutshell
 
-`grill-for-refinement` sits outside this flow — it sharpens a ticket *before* it's ready for intake.
+`/good-night-have-fun` takes a spec issue and does Path A's per-slice loop for you, concurrently:
 
-## Install
+- **Preflight while you're awake.** Auth, clean tree, dependency graph, verification gate, baseline
+  failures, triage. Anything that can fail, fails *here* — not at 3am.
+- **Then it runs alone.** Unblocked tickets go to subagents in git worktrees, each gated against the
+  baseline and code-reviewed, merged one at a time. Two failures on a ticket means revert and move on.
+- **You get a PR and a summary.** `SUMMARY.md` leads with **Needs you**, then **Failed**, then
+  **Decisions made autonomously** — audit those before trusting the PR.
+
+It only works if planning was done for it: tickets need `## Parent` and `## Blocked by` sections,
+human-only work isolated as `needs-human` tickets, and a verification gate in the repo's `AGENTS.md`
+or `CLAUDE.md`. Choose GNHF at intake and `jira-intake` carries those rules into `/to-spec` and
+`/to-tickets` for you. Failed and `needs-human` tickets fall back to Path A.
+
+### 🧩 No conductor skill — on purpose
+
+A wrapper holding the whole pipeline in context was built and retired: standing policy belongs in
+`CLAUDE.md`, and paying tokens each invocation to restate something always true is the anti-pattern
+this repo is about. Instead, **every skill ends by naming the next command and the reset before it.**
+
+`grill-for-refinement` sits outside the flow — it sharpens a ticket *before* it's ready for intake.
+
+## 📦 Install
 
 ```bash
 npx skills@latest add scottcarlson/skills
 ```
 
-Pick the skills and agents from the interactive prompts. Then, once:
+Pick skills and agents from the prompts, then run once:
 
 ```
 /setup-scott-carlson-skills
 ```
 
-That step is not optional decoration. It verifies the Matt Pocock skills these depend on are actually
-installed, installs the four subagent definitions `jira-intake` dispatches to, adds the standing
-context policy to your `CLAUDE.md` (showing you the diff first), and stops ticket payloads from being
-committed. Skip it and the pipeline dead-ends at its first handoff — silently, mid-session, after
-you've already spent the context.
+**Not optional.** It verifies Matt Pocock's skills are installed, installs the subagents
+`jira-intake` dispatches to, adds the standing context policy to your `CLAUDE.md` (diff shown first),
+and keeps ticket payloads out of git. Skip it and the pipeline dead-ends at its first handoff,
+mid-session, after you've spent the context.
 
 > The `skills` CLI is [`vercel-labs/skills`](https://github.com/vercel-labs/skills). This repo
-> publishes nothing to npm and ships no installer of its own; it's a GitHub repository that CLI reads.
+> publishes nothing to npm and ships no installer of its own.
 
-## Prerequisites
+## ✅ Prerequisites
 
 | Prerequisite | Required by | Without it |
 | --- | --- | --- |
-| [`mattpocock/skills`](https://github.com/mattpocock/skills) | all of it | `grill-for-refinement` breaks outright; the pipeline dead-ends at planning and at implementation |
+| [`mattpocock/skills`](https://github.com/mattpocock/skills) | everything | `grill-for-refinement` breaks; pipeline dead-ends at planning and implementation |
 | Atlassian (Rovo) MCP | `jira-intake`, `grill-for-refinement` | those two can't run |
-| Figma MCP | `jira-intake`, `pr-description` | design context and Figma screenshots skipped; both still work |
-| `gh` CLI, authenticated | `where-am-i`, `pre-implement`, `pr-description`, `pr-review` | those four can't run |
+| Figma MCP | `jira-intake`, `pr-description` | design context skipped; both still work |
+| `gh` CLI, authenticated | `where-am-i`, `pre-implement`, `good-night-have-fun`, `pr-description`, `pr-review` | those can't run |
 | Codex | `pr-review` | loses its peer-review step |
-| A Fable-capable plan | `exhaustive-reasoner` as shipped | `/setup-scott-carlson-skills` offers to rewrite it to Opus |
+| A Fable-capable plan | `exhaustive-reasoner` as shipped | setup offers to rewrite it to Opus |
 
-`terse` needs nothing.
+`terse` and `im-dumb` need nothing.
 
-## The skills
+## 🧰 The skills
 
-Each skill's `SKILL.md` is its operational spec. Each `WHY.md` is the reasoning — the premise, the
-failure it prevents, and when *not* to reach for it. Start with the `WHY.md` if you're deciding
-whether you want the skill at all.
+Each `SKILL.md` is the operational spec; each `WHY.md` is the reasoning — the failure it prevents and
+when *not* to use it. Read the `WHY.md` first if you're deciding whether you want a skill at all.
 
 | Skill | What it's for | |
 | --- | --- | --- |
-| **`jira-intake`** | Entry point for new work. Fans out one subagent per context source so raw payload lands on disk instead of your context window, then hands you the next command — including the reminder to commit ADRs *before* a reset destroys the arguments behind them. | [why](./skills/engineering/jira-intake/WHY.md) |
-| **`where-am-i`** | Maps this repo's issues into done / blocked / ready-for-agent / ready-for-you, so you know what to run concurrently and what HITL work to take while agents churn. Read-only. | [why](./skills/engineering/where-am-i/WHY.md) |
-| **`pre-implement`** | Names the model and reasoning effort for one slice, from that slice alone. If the ticket can't be sized from its own text, that's the finding. | [why](./skills/engineering/pre-implement/WHY.md) |
-| **`grill-for-refinement`** | Sharpens a single ticket to refinement-ready with a refinement lens, not an implementation one. Drafts a comment; posts on your confirmation. | [why](./skills/engineering/grill-for-refinement/WHY.md) |
-| **`pr-description`** | Writes or rewrites a scannable description for an existing PR, using the session's own memory of the work when it did the work. | [why](./skills/engineering/pr-description/WHY.md) |
-| **`pr-review`** | Reviews a PR, folds in Copilot's findings, has Codex peer-review the combined set, then opens a follow-up PR with fixes one commit at a time. | [why](./skills/engineering/pr-review/WHY.md) |
-| **`terse`** | Low-token communication mode. Looks like a style preference; it's the load-bearing context primitive for everything else here. | [why](./skills/productivity/terse/WHY.md) |
-| **`setup-scott-carlson-skills`** | Run once. Checks prerequisites, installs the subagents, adds the standing policy, keeps payloads out of git. | [why](./skills/engineering/setup-scott-carlson-skills/WHY.md) |
+| 🎫 **`jira-intake`** | Entry point. Fans out one subagent per context source, asks manual vs GNHF, and hands you the next command — including the reminder to write ADRs *before* a reset destroys them. | [why](./skills/engineering/jira-intake/WHY.md) |
+| 🌙 **`good-night-have-fun`** | Overnight orchestrator. Works a spec's `ready-for-agent` tickets in parallel worktrees, reverts what it can't land, leaves a PR and a summary. | [why](./skills/engineering/good-night-have-fun/WHY.md) |
+| 🗺️ **`where-am-i`** | Maps issues into done / blocked / ready-for-agent / ready-for-you, so you know what to run concurrently. Read-only. | [why](./skills/engineering/where-am-i/WHY.md) |
+| 📏 **`pre-implement`** | Names the model and effort for one slice, from that slice alone. If it can't be sized from its own text, that's the finding. | [why](./skills/engineering/pre-implement/WHY.md) |
+| 🔍 **`grill-for-refinement`** | Sharpens one ticket to refinement-ready. Drafts a comment; posts on your confirmation. | [why](./skills/engineering/grill-for-refinement/WHY.md) |
+| 📝 **`pr-description`** | Writes or rewrites a scannable description for an existing PR. | [why](./skills/engineering/pr-description/WHY.md) |
+| 👀 **`pr-review`** | Reviews a PR, folds in Copilot's findings, has Codex peer-review them, then opens a follow-up PR with fixes. | [why](./skills/engineering/pr-review/WHY.md) |
+| ✂️ **`terse`** | Low-token mode. Looks like a style preference; it's the load-bearing context primitive for the rest. | [why](./skills/productivity/terse/WHY.md) |
+| 🧸 **`im-dumb`** | Re-explains the last response (or a follow-up) in plain, friendly language. | [why](./skills/productivity/im-dumb/WHY.md) |
+| ⚙️ **`setup-scott-carlson-skills`** | Run once. Checks prerequisites, installs subagents, adds the standing policy. | [why](./skills/engineering/setup-scott-carlson-skills/WHY.md) |
 
-Three through-lines worth knowing before you use any of them:
+Three through-lines:
 
-- **Anything team-visible is drafted first.** `grill-for-refinement` posts a ticket comment,
-  `pr-review` opens a PR, `pr-description` edits one. All three show you the full text and wait.
+- **Team-visible actions are drafted first.** Ticket comments, PRs, and PR edits show full text and wait.
 - **Digest in, payload on disk.** `jira-intake` is the reference implementation of rule 1.
-- **The skill tells you the next command.** Including which reset comes first.
+- **The skill tells you the next command**, including which reset comes first.
 
-## Updating
+## 🔄 Updating
 
 ```bash
 npx skills@latest update
 ```
 
-Run it yourself, periodically. **Nothing notifies you** when this repo changes — that's the trade
-made in [ADR-0001](./docs/adr/0001-npx-only-distribution.md) by choosing this channel over a Claude
-Code plugin.
+Run it periodically. **Nothing notifies you** when this repo changes — the trade made in [ADR-0001](./docs/adr/0001-npx-only-distribution.md) by choosing this channel over a Claude Code plugin.
 
 > ### ⚠️ Don't edit installed skills
 >
-> Fork this repo instead. The CLI compares the *upstream* hash against the hash recorded at install
-> time and never inspects your installed files. So local edits are neither preserved nor repaired:
+> Fork this repo instead. The CLI compares the *upstream* hash to the hash recorded at install time
+> and never inspects your installed files, so local edits are neither preserved nor repaired:
 >
-> - When upstream **has** changed, your edits are overwritten with no prompt.
-> - When upstream **hasn't** changed, the skill is skipped and your edit survives forever — quietly
->   diverging from what everyone else is running.
+> - Upstream **changed** → your edits are overwritten, no prompt.
+> - Upstream **unchanged** → the skill is skipped and your edit quietly diverges forever.
 >
-> "Just run update to get back in sync" is false. ADR-0001 has a worked example of a real skill that
-> `update` will never repair.
+> "Just run update to get back in sync" is false — ADR-0001 has a worked example.
 
-## Contributing / authoring
+## 🤝 Contributing
 
 [`CLAUDE.md`](./CLAUDE.md) has the authoring conventions, [`CONTEXT.md`](./CONTEXT.md) the vocabulary,
 and [`docs/adr/`](./docs/adr/) the reasoning behind the repo's shape.
@@ -157,12 +168,12 @@ node scripts/validate-skills.mjs   # run before committing
 ./scripts/sync-skills.sh          # copy skills into ~/.agents and link them for authoring
 ```
 
-## Credit
+## 🙏 Credit
 
 The pipeline these skills plug into, the grilling and spec-and-tickets flow, and most of the thinking
 about where a context window actually fails, are [Matt Pocock's](https://www.aihero.dev/skills). This
 repo is the connective tissue, not the machine.
 
-## License
+## 📄 License
 
 MIT
