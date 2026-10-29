@@ -14,6 +14,7 @@ fatal=()
 warn=()
 base_branch=""
 repo=""
+planning_docs=()
 
 emit_and_exit() {
   jq -n \
@@ -21,7 +22,8 @@ emit_and_exit() {
     --arg repo "$repo" \
     --argjson fatal "$(printf '%s\n' "${fatal[@]+"${fatal[@]}"}" | jq -R . | jq -s 'map(select(. != ""))')" \
     --argjson warn "$(printf '%s\n' "${warn[@]+"${warn[@]}"}" | jq -R . | jq -s 'map(select(. != ""))')" \
-    '{repo: $repo, base_branch: $base_branch, fatal: $fatal, warn: $warn, ok: ($fatal | length == 0)}'
+    --argjson planning_docs "$(printf '%s\n' "${planning_docs[@]+"${planning_docs[@]}"}" | jq -R . | jq -s 'map(select(. != ""))')" \
+    '{repo: $repo, base_branch: $base_branch, planning_docs: $planning_docs, fatal: $fatal, warn: $warn, ok: ($fatal | length == 0)}'
   [ ${#fatal[@]} -eq 0 ] || exit 1
   exit 0
 }
@@ -50,10 +52,19 @@ else
   fi
 fi
 
-# A dirty tree would be swept into the first worktree and land in someone's PR.
-if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
-  fatal+=("Working tree is not clean. Commit or stash before starting an unattended run.")
-fi
+# Code changes in a dirty tree would land in someone's PR, so they are fatal. Docs the planning
+# session wrote (ADRs, CONTEXT, AGENTS, README, anything under docs/) are the one exception: they
+# are reported in `planning_docs` and the skill commits them first on the integration branch.
+# Renames ("old -> new") are never treated as docs.
+while IFS= read -r line; do
+  [ -n "$line" ] || continue
+  path="${line:3}"
+  case "$path" in
+    *" -> "*) fatal+=("Working tree is not clean (\`$path\`). Commit or stash before starting an unattended run."); break ;;
+    *.md|*.mdx|docs/*|*/docs/*) planning_docs+=("$path") ;;
+    *) fatal+=("Working tree has uncommitted non-doc changes (\`$path\`). Commit or stash before starting an unattended run."); break ;;
+  esac
+done < <(git status --porcelain --untracked-files=all 2>/dev/null)
 
 # Never assume main.
 if base_branch=$(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name' 2>/dev/null) \
