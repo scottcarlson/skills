@@ -104,8 +104,8 @@ It **warns but does not fail** if `~/.agents/skills/implement/SKILL.md` or
 `~/.agents/skills/pre-implement/SKILL.md` is unreadable — see [§1.6](#16-triage-and-size) and
 [§2.2](#22-implement-one-ticket) for what happens then.
 
-The script cannot see which skills this session can call, so check that yourself: `code-review`,
-`resolving-merge-conflicts`, and `pr-description` must each appear in your available skills.
+The script cannot see which skills this session can call, so check that yourself: `code-review` and
+`pr-description` must each appear in your available skills.
 **Hard fail** on any that is missing. Each is called after hand-over with no fallback, so a missing
 one fails every ticket — or the landing — at 3am instead of now.
 
@@ -369,9 +369,11 @@ Never merge two tickets at once. Merge inside `wt-integration`. For each green t
 4. Only on a green gate: re-capture the baseline, `ledger.sh set` the ticket's status to
    `"merged"`, and remove the worktree.
 
-On a merge conflict, dispatch a resolution subagent and tell it: call the Skill tool with
-`"resolving-merge-conflicts"`. If it cannot resolve cleanly, abort the merge and treat the ticket as
-failed. Serialising merges is what makes a conflict arrive attached to one identifiable ticket,
+On a merge conflict, dispatch one resolution subagent for that merge and tell it: read both sides'
+intent from the ticket and the diffs before touching a marker; keep both sides' changes where they
+are compatible; never take "ours" or "theirs" wholesale to make the markers go away; and finish
+the merge commit. It does not run the gate — step 3 does, so a bad resolution surfaces there as a
+regression. If it cannot resolve cleanly, abort the merge and treat the ticket as failed. Serialising merges is what makes a conflict arrive attached to one identifiable ticket,
 while the run still has hours to deal with it — rather than as one un-attributable pile-up at 4am.
 
 ### 2.5 Propagate what was learned
