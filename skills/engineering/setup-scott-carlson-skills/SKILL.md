@@ -141,7 +141,9 @@ Rules:
 `.ig.jira-tickets/` at the repo root. That's the point: payload on disk, digest in context. But it
 must never be committed.
 
-Append to the **current repo's** `.gitignore` if not already covered:
+Append to the **current repo's** `.gitignore` if not already covered. Test coverage with
+`git check-ignore -q .ig.jira-tickets/probe`, not by grepping — a rule in the user's global excludes
+file counts, and in that case write nothing:
 
 ```gitignore
 # Agent session payloads — raw context, never repository content
