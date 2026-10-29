@@ -130,6 +130,8 @@ Completion: a final, reconciled list of findings you're actually going to fix, e
 
 For each surviving finding, make the change and commit it on its own — never batch unrelated fixes into one commit, and never fold two categories into one commit even if they touch the same file. This is what lets someone cherry-pick "just the critical fixes" or skip the nice-to-haves cleanly. Order the commits by category severity (Critical first, then Architectural, then the rest) so the log itself reads most-important-first. Commit message: a plain description of the fix, e.g. `fix: guard against nil pointer in pagination cursor`. Don't reference the PR-review process, Copilot, or the category label in the commit message itself (that belongs in the follow-up PR's description, not git history).
 
+Record each finding's **full** commit SHA as you make it (`git rev-parse HEAD`) — step 10 links every bullet to its commit.
+
 Completion: `git log origin/<baseRefName>..HEAD --oneline` shows exactly one commit per surviving finding, ordered by category severity.
 
 ### 9. Confirm, then push and open the follow-up PR
@@ -169,7 +171,7 @@ Optimize for skimming, not reading — lead with what's a must-fix, let categori
 One or two sentences: what this PR reviewed and the overall take — call out up front if there's anything in 🚨 Critical.
 
 ### 🚨 Critical
-- **<short title>** — <one-line what/why>
+- **<short title>** — <one-line what/why> [commit](<commit-url>)
   <details><summary>Details</summary>
 
   Technical specifics: what was wrong, the fix, file(s) touched.
@@ -177,7 +179,7 @@ One or two sentences: what this PR reviewed and the overall take — call out up
   </details>
 
 ### 🏗️ Architectural
-- 🤖 **<short title>** *(from Copilot's review)* — <one-line what/why>
+- 🤖 **<short title>** *(from Copilot's review)* — <one-line what/why> [commit](<commit-url>)
   <details><summary>Details</summary>
 
   Copilot's original comment, why it held up, the fix.
@@ -185,7 +187,7 @@ One or two sentences: what this PR reviewed and the overall take — call out up
   </details>
 
 ### 🧹 Cleanup
-- **<short title>** — <one-line what/why>
+- **<short title>** — <one-line what/why> [commit](<commit-url>)
   <details><summary>Details</summary>
 
   ...
@@ -200,4 +202,4 @@ Name the reviewer that actually ran (Fable only if Codex was unavailable, with a
 - JIRA: <id> (omit this line if none was given)
 ```
 
-One category section per category that survived step 7, in severity order, each holding its bullets in commit order. Omit any category with nothing in it — don't print an empty "Performance" section for symmetry. Copilot comments you didn't act on don't get a bullet here — they're answered on the original PR's threads. Mark Copilot-sourced bullets with the 🤖 *(from Copilot's review)* tag so credit is visible at a glance regardless of which category they landed in. Keep each top-level bullet to one line; everything technical (diff snippets, reasoning, alternatives considered) goes inside its `<details>` dropdown so the description reads as a scannable list first, deep-dive second.
+One category section per category that survived step 7, in severity order, each holding its bullets in commit order. Omit any category with nothing in it — don't print an empty "Performance" section for symmetry. Copilot comments you didn't act on don't get a bullet here — they're answered on the original PR's threads. Mark Copilot-sourced bullets with the 🤖 *(from Copilot's review)* tag so credit is visible at a glance regardless of which category they landed in. End every bullet with a `[commit](<commit-url>)` link to the one commit that made that exact change, so a dev can jump straight to the diff. Build the URL from the full SHA recorded in step 8: `<repo-url>/commit/<full-sha>`, with `<repo-url>` from `gh repo view --json url -q .url` for the repo the follow-up branch is pushed to. Never link a short SHA, a branch, or the PR's combined diff. If you amend, rebase, or reorder commits after drafting, regenerate the links from the new SHAs. Keep each top-level bullet to one line; everything technical (diff snippets, reasoning, alternatives considered) goes inside its `<details>` dropdown so the description reads as a scannable list first, deep-dive second.
