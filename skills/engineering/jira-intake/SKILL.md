@@ -93,6 +93,7 @@ Only when I chose **GNHF**. Nobody will be at the keyboard between the first tic
 - **Put human-only work in its own ticket**, labelled `needs-human` and **not** `ready-for-agent` — third-party admin UIs, manual asset uploads, production-data checks, anything needing a judgment call the spec can't make. Minimise what depends on it.
 - **Check the target repo's `AGENTS.md`/`CLAUDE.md` has an `## Agent verification gate` block** (`run:`, `skip:`, optionally `install:`). If it doesn't, say so now — otherwise the run is ungated and every ticket ships stamped `⚠️ UNVERIFIED`.
 - **ADRs written before the reset**, as always — nobody is awake to re-argue a rejected option.
+- **Leave planning's doc changes uncommitted.** ADRs, `CONTEXT.md`, `AGENTS.md`/`CLAUDE.md`, README and any other doc that grilling touches stay in the working tree: **do not commit or push them, and above all not to the base branch**. The work isn't implemented yet and the decisions can still change. `/good-night-have-fun` picks them up and commits them as the first commit on its integration branch, so they ship in the same PR as the code they describe. (Code changes must not be left uncommitted — that still fails preflight.)
 
 The run itself is `/good-night-have-fun "GitHub issue #<spec>"` after `/to-tickets` and a `/clear`; I must stay for its preflight. Name that as the next step once `/to-tickets` is done.
 
@@ -128,13 +129,13 @@ Write a detailed `HANDOFF.md` into the ticket directory (`.ig.jira-tickets/<id>-
 - Pointers to every digest on disk (`TICKET.md`, `FIGMA-NOTES.md`, `IMAGE-NOTES.md`, `NOTES-DIGEST.md`, `INITIAL-PROMPT.md`) — whichever exist — so the fresh session pulls detail on demand instead of re-fetching.
 - Open questions and gaps flagged during intake.
 - The same standing reminders as 6a.4 (ADRs, keep the interview on code/AC, don't produce logic code during planning), since nothing downstream restates them.
-- **Run mode: manual or GNHF.** If GNHF, include the [GNHF planning requirements](#the-gnhf-planning-requirements) in full, as a section the fresh session cannot miss, and state that `/to-spec` and `/to-tickets` must honour them.
+- **Run mode: manual or GNHF.** If GNHF, include the [GNHF planning requirements](#the-gnhf-planning-requirements) in full, as a section the fresh session cannot miss, and state that `/to-spec` and `/to-tickets` must honour them. That includes the rule that doc changes from grilling are left uncommitted for GNHF to commit, never pushed to the base branch.
 
 Then give me a **ready-to-paste prompt for the new session**. It must:
 
 - Point at the handoff document's path and tell the new session to read it first.
 - Name the planning skill to invoke (`/grill-with-docs` or `/wayfinder`) and the ticket id.
-- State the run mode. If GNHF, say the planning must be AFK-ready and point at the handoff's GNHF section.
+- State the run mode. If GNHF, say the planning must be AFK-ready, that doc changes from grilling stay uncommitted (no commit or push to the base branch), and point at the handoff's GNHF section.
 - Surface any additional context, nuance, or clarification from *this* conversation that didn't make it into `HANDOFF.md` or the digests — anything said in passing, any ambiguity I should resolve up front, anything the new session would otherwise have to ask me to repeat.
 
 Finally, remind me to rename the **new** session once it opens, and print the command with the real ticket id substituted so I can copy and paste it:

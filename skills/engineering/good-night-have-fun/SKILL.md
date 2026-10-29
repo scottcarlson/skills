@@ -95,7 +95,10 @@ It checks, and **hard fails** on any of:
 
 - `gh auth status` — authenticated, with `repo` scope. A fine-grained or app token reports no
   scopes, so for those this is a warning instead.
-- Working tree clean. Uncommitted changes would be swept into the first worktree.
+- Working tree clean of code changes. Uncommitted code would be swept into the first worktree.
+  Uncommitted **docs** — `*.md` or anything under `docs/`, i.e. the ADRs, `CONTEXT.md`, `AGENTS.md`,
+  README and similar that planning wrote — are allowed and come back in preflight's
+  `planning_docs`; [§1.5](#15-capture-the-baseline) commits them.
 - Remote reachable, and the base branch resolved from `gh repo view --json defaultBranchRef`.
   Never assume `main`.
 - `git worktree` usable.
@@ -200,6 +203,16 @@ Create the integration branch `gnhf/<spec>-<slug>` from `origin/<base_branch>` i
 ```bash
 git worktree add .ig.good-night/gh-<spec>-<slug>/wt-integration -b gnhf/<spec>-<slug> origin/<base_branch>
 ```
+
+If preflight's `planning_docs` is non-empty, those are the decisions the planning session wrote
+before the run. They are not shipped yet, so they must not go to the base branch, and they must not
+be lost. Make them the **first commit on the integration branch**: in `wt-integration`, apply the
+primary tree's diff for exactly those paths (`git -C <primary> diff HEAD -- <paths>`, plus the
+contents of any untracked ones), commit with `docs: 📝 planning decisions for #<spec>`, and
+verify `git -C <primary> status --porcelain` for those paths is now reproduced by that commit. Only
+then restore those paths in the primary tree (`git checkout -- <tracked>`, delete the untracked
+ones) so it ends clean — the commit is the only copy and the PR carries it. If the diff does not
+apply, **hard fail** and tell the user; they are still here. Every ticket branches from this commit.
 
 The user's primary tree is never checked out or merged into — it may be on any branch, holding
 anything. Every merge and every post-merge gate run in [§2.4](#24-merge-one-at-a-time) happens in
