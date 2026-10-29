@@ -85,8 +85,12 @@ deliberately leaves them, and `git worktree add -b` cannot recreate a name that 
 and tell the user to merge or close that work and delete the branches first. Never delete them
 yourself — they may be the only copy of a night's work.
 
-Confirm `.gitignore` covers `.ig.*`. If it does not, **hard fail**: tell the user to run
-`/setup-scott-carlson-skills`, which owns that line. This skill does not write `.gitignore`.
+`.ig.*` must be ignored — by the repo's `.gitignore`, the user's global excludes file, or
+`.git/info/exclude`; any of them counts. `assets/preflight.sh` already asks git (`git check-ignore`),
+which sees all three, and that result is the only verdict: do **not** grep `.gitignore` yourself, or a
+rule that lives in the global file reads as missing. Only if preflight reports it uncovered,
+**hard fail**: tell the user to run `/setup-scott-carlson-skills`, which owns that line. This skill
+does not write `.gitignore`.
 
 ### 1.2 Environment
 
