@@ -37,7 +37,9 @@ not. The author resolves threads when the follow-up merges; an unanswered thread
 whether it was seen, ignored, or missed.
 
 The description is structured (critical / architectural / cleanup / peer-reviewed / context) because a
-flat list of fifteen fixes gets skimmed and merged, which defeats the point of reviewing.
+flat list of fifteen fixes gets skimmed and merged, which defeats the point of reviewing. Each bullet
+links its one commit because the one-commit-per-change rule only pays off if a reader can jump from
+the sentence straight to the diff that made it.
 
 ## Constraints it obeys
 
