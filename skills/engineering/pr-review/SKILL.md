@@ -10,7 +10,7 @@ disable-model-invocation: true
 
 Takes an existing GitHub PR, reviews it (optionally sharpened by a JIRA ticket's full context), folds in GitHub Copilot's review comments, gets the combined findings peer-reviewed by Codex (Fable only as a fallback), then implements the survivors as one commit per change on a new branch and opens a follow-up PR **back into the original PR's branch** — with a description built to be skimmed in ten seconds, not read top to bottom.
 
-This creates branches, commits, pushes, and opens a PR — all team-visible, hard-to-reverse actions. Confirm with me before the push/PR-creation step (see step 8); never run this end-to-end unattended.
+This creates a worktree, branches, commits, pushes, and opens a PR — all team-visible, hard-to-reverse actions. Confirm with me before the push/PR-creation step (see step 8); never run this end-to-end unattended.
 
 ## Process
 
@@ -64,14 +64,21 @@ Follow the same sourcing order as `/jira-intake`:
 
 Distill this into a short **spec brief**: what the ticket asks for, key constraints, what the design implies. This is your Spec-axis source for step 5 — don't let the review skill re-derive it from scratch.
 
-### 5. Check out the PR and review it yourself
+### 5. Check out the PR into a worktree and review it yourself
+
+**Never touch the main checkout.** I often have other Claude sessions or my own work running in it, so every branch switch, edit, and commit for this skill happens in a dedicated git worktree. Do not run `gh pr checkout` or `git checkout` in the primary working directory.
+
+Prefer `<repo-root>/.claude/worktrees/pr-review-<num>` (resolve the root with `git rev-parse --show-toplevel`, from the primary checkout). If `.claude/worktrees/` isn't ignored by the repo, add it to `.git/info/exclude` rather than editing a tracked `.gitignore`. If that path can't be used (not writable, a stale directory is in the way), fall back to a sibling directory such as `<repo-root>/../<repo-name>-pr-review-<num>` and say so.
 
 ```
-gh pr checkout <num>
-git checkout -b review/pr-<num>
+git fetch origin pull/<num>/head
+git worktree add -b review/pr-<num> <worktree-path> FETCH_HEAD
+cd <worktree-path>
 ```
 
-(If this repo has no write access to a fork's branch, `checkout` still works locally — you just can't push a branch into the fork later; see step 8's caveat.)
+(`pull/<num>/head` works for fork PRs too. If this repo has no write access to a fork's branch, you just can't push into the fork later; see step 9's caveat.) If `review/pr-<num>` or the worktree already exists from an earlier run, show me and ask before reusing or removing it.
+
+From here through step 9, run every command from inside the worktree, and point sub-agents (the two-axis review, Codex) at that path, not the primary checkout.
 
 Diff against the merge-base with the PR's base branch: `git diff origin/<baseRefName>...HEAD`.
 
@@ -158,6 +165,8 @@ gh api repos/{owner}/{repo}/pulls/<num>/comments/<comment-id>/replies -f body="<
 - **Review-level Copilot bodies** with no inline thread: fold them into a single `gh pr comment <num>` summarizing which points were fixed and which weren't, with reasons.
 
 Reply to the original comment's id, not to a reply in the thread. Verify afterwards that every recorded Copilot comment id has a reply from you (`gh api repos/{owner}/{repo}/pulls/<num>/comments --paginate`), and report any that failed.
+
+After the PR is open and replies are verified, offer to remove the worktree (`git worktree remove <worktree-path>` from the primary checkout); leave the branch in place. Don't remove it without my say-so if anything is uncommitted.
 
 **Fork caveat:** if step 2 flagged the original PR as coming from a fork you don't have push access to, `git push` here will fail. Tell me and offer the fallback: post the findings and diff as a **comment on the original PR** (`gh pr comment <num> --body-file <path>`) instead of a follow-up PR. Copilot replies still go out on the original PR, but link the comment rather than a follow-up PR URL and say fixes weren't pushed.
 

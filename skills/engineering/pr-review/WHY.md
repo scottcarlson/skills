@@ -43,6 +43,8 @@ the sentence straight to the diff that made it.
 
 ## Constraints it obeys
 
+**Works in a git worktree, never the main checkout.** The fixes are real branch switches and commits, and the main checkout is usually where other Claude sessions or in-progress work live. A worktree (preferably under `.claude/worktrees/`) keeps the two from colliding.
+
 **Confirms before opening the PR or replying.** Both are team-visible and it's someone else's branch.
 
 ## When not to use it
