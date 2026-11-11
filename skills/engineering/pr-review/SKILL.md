@@ -149,8 +149,10 @@ Once confirmed:
 
 ```
 git push -u origin review/pr-<num>
-gh pr create --base <headRefName> --head review/pr-<num> --title "<title>" --body-file <path>
+gh pr create --base <headRefName> --head review/pr-<num> --title "review(ai): 🤖 <description>" --body-file <path>
 ```
+
+The title **always** starts with the literal prefix `review(ai): 🤖 ` followed by a short description of what the review changes (not the original PR's title copied verbatim, and never without the prefix).
 
 Then reply to Copilot on the original PR (see below) — this needs the follow-up PR's URL, so it comes after `gh pr create`.
 
