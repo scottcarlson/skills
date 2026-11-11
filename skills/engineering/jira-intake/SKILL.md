@@ -33,15 +33,15 @@ The id is the token shaped like `ABC-123`. Use the upper-cased form for lookups,
 
 Write the full invoking message **verbatim** to `INITIAL-PROMPT.md` in the ticket directory. It exists to survive the `/compact` that follows this skill. If it already exists with materially different content, confirm before overwriting.
 
-### 2b. Pause — have me rename this session
+### 2b. Recommend renaming this session — without pausing
 
-Stop here and wait. Print the exact command, with the real ticket id substituted, so I can copy and paste it:
+Print the exact command, with the real ticket id substituted, so I can copy and paste it whenever I like:
 
 ```
 /rename ABC-123 [INTAKE]
 ```
 
-Use the upper-cased ticket id resolved in step 1 in place of `ABC-123`. Do not fan out until I confirm the rename is done (or tell you to skip it) — the point is that this session is identifiable *before* it fills up with intake.
+Use the upper-cased ticket id resolved in step 1 in place of `ABC-123`. This is a recommendation only: **do not stop, wait, or ask for confirmation** — go straight on to step 3 in the same turn. The point is that this session is identifiable, not that intake is gated on it.
 
 ### 3. Fan out — one subagent per source, in parallel
 
