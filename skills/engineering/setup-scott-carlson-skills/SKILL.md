@@ -47,7 +47,8 @@ Required, and what needs each one:
 | Atlassian (Rovo) MCP | `jira-intake`, `grill-for-refinement`; optional for the PR skills | Is `getJiraIssue` among your tools? |
 | Figma MCP | `jira-intake` design context; `pr-description` screenshots | Is `get_design_context` among your tools? |
 | `gh` CLI, authenticated | `where-am-i`, `pre-implement`, `pr-description`, `pr-review` | `gh auth status` |
-| Codex | `pr-review`'s peer-review step | Is a Codex integration available? |
+| Codex | `pr-review`'s peer-review step; tie-breaker in `jira-intake`'s planning protocol | Is a Codex integration available? |
+| Gemini via `agy` (optional) | second peer in `pr-review`; planner B in `jira-intake`'s planning protocol and `grill-for-refinement` | `command -v agy && agy models \| grep -E '^gemini-4-(neon\|carbon)-high'` |
 | A Fable-capable plan | `exhaustive-reasoner` as shipped | See section C. |
 
 **Local state.** `~/.claude/agents/` — which definitions already exist. `~/.claude/CLAUDE.md` — does
@@ -85,7 +86,8 @@ skills stop working and which degrade:
 - **No Figma MCP** → `jira-intake` skips design context; `pr-description` skips Figma screenshots.
   Both still work.
 - **No `gh`** → the two PR skills cannot run; `pre-implement` cannot read the issue; `where-am-i` cannot read the tracker.
-- **No Codex** → `pr-review` loses its peer-review step. Say so and continue; don't silently skip it.
+- **No Codex** → `pr-review` loses its peer-review step unless Gemini is connected. Say so and continue; don't silently skip it.
+- **No Gemini (`agy`)** → `pr-review` runs Codex alone; planning sessions and `grill-for-refinement` run single-planner. Optional; nothing breaks.
 
 This section installs nothing. It is a report, and the user decides what to fix.
 

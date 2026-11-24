@@ -66,9 +66,19 @@ Produce a **concise context brief** (aim for under 30 lines) from the digests: w
 
 Note where the detail lives (`TICKET.md`, `FIGMA-NOTES.md`, …) so any later session can pull it on demand instead of re-fetching.
 
-### 5. Ask two questions: run mode, and continue-or-handoff
+### 5. Ask three questions: planning path, run mode, and continue-or-handoff
 
-Before doing anything else, ask both together.
+Before doing anything else, ask all three together, leading each with your recommendation so I can accept it in a word.
+
+**Planning path** — does this need a planning session, and which kind? Recommend one from the brief, with a one-line why:
+
+> **Grilling** (`/grill-with-docs`), **wayfinder** (`/wayfinder`), or **neither** (straight to `/pre-implement` → `/implement`)?
+
+- **Grilling** — one coherent feature, bug, or spike that a single relentless interview can sharpen. **This is the common case; recommend it unless the ticket genuinely resists it.**
+- **Wayfinder** — too big to hold in one session, or carrying enough unknowns that it needs a map of decision tickets resolved one at a time.
+- **Neither** — small, already-unambiguous work (a contained bug, a copy change) where an interview would only restate the ticket. No planning session, no planning protocol, no model switch. `/pre-implement` sizes one GitHub issue, so if none exists for this work yet, `/to-tickets` cuts a single one first — and GNHF always needs `/to-tickets`.
+
+Grilling or wayfinder brings in [the planning protocol](#the-planning-protocol).
 
 **Run mode** — how will the tickets be worked once planning is done?
 
@@ -78,7 +88,7 @@ Manual is the default if I don't say. **GNHF** adds the AFK planning requirement
 
 **Session** —
 
-> Continue in this session (`/compact` then plan here), or create a **handoff document** for a completely fresh session?
+> Continue in this session (`/compact` then carry on here), or create a **handoff document** for a completely fresh session?
 
 - **Continue here** → go to step 6a.
 - **Handoff document** → go to step 6b.
@@ -97,21 +107,75 @@ Only when I chose **GNHF**. Nobody will be at the keyboard between the first tic
 
 The run itself is `/good-night-have-fun "GitHub issue #<spec>"` after `/to-tickets` and a `/clear`; I must stay for its preflight. Name that as the next step once `/to-tickets` is done.
 
+### The planning protocol
+
+Only when the planning path is **grilling** or **wayfinder** (not when neither is needed). It exists because one planner has one set of blind spots, and because a planning session that reads its own sources fills its window and drifts into the dumb zone long before it finishes. Write it in full to `PLANNING-PROTOCOL.md` in the ticket directory (first line: `path: grilling` or `path: wayfinder`) — a `/compact` summary is lossy, and wayfinder ticket sessions start fresh, so this file is how the protocol reaches them.
+
+**Is Gemini available?** Check once, here, and record the answer in `PLANNING-PROTOCOL.md`:
+
+```
+command -v agy && agy models | grep -E '^gemini-4-(neon|carbon)-high'
+```
+
+The planning session re-checks before its first wave. If Gemini isn't available, the independent-planner section below doesn't apply — say so once and plan as before, single-planner; everything else in the protocol still holds.
+
+**1. Independent planners, every wave.** The orchestrating session is planner A. Gemini is planner B:
+
+| Path | Planner A (orchestrator) | Planner B (Gemini via `agy`) |
+| --- | --- | --- |
+| Grilling | Opus, `high` or `xhigh` | Gemini 4 Neon, high thinking — `--model gemini-4-neon-high` |
+| Wayfinder | Fable | Gemini 4 Carbon, high thinking — `--model gemini-4-carbon-high` (Carbon's top tier; it has no `xhigh`) |
+
+For **each wave** — each round of questions, recommendations, or decisions put to me:
+
+- Write a self-contained **wave brief** to the ticket directory: the decisions so far, the relevant digests, and what this wave must settle. Not your own leanings.
+- Form planner A's position **before** reading planner B's.
+- Run planner B blind, headless, and read-only, with the brief inline, in a fresh call per wave (no `--conversation`, so it doesn't rot either):
+
+  ```
+  agy -p "$(cat <wave-brief>)" --model <planner-b-model> --mode plan --output-format json
+  ```
+
+  Open the brief with "Everything you need is in this prompt; do not run commands or read files." — in `--mode plan` its shell is denied, and pointing it at a file instead of inlining makes it stop without answering. Read the `response` field. Never pass `--dangerously-skip-permissions`. On error, one retry; then carry on single-planner for that wave and say so.
+- **Compare, then ask me.** Where they agree, recommend with that confidence. Where they differ, show me both positions and which one you recommend and why — settled on the merits, not by which model said it. A question or option only one planner raised still gets asked if it earns it.
+
+**Codex as third reviewer or tie-breaker** (`codex:codex-rescue`), when the orchestrator judges it necessary — not every wave. Reach for it when the planners split on a consequential or hard-to-reverse decision, or agree so readily you suspect a shared blind spot. For an independent third view, give it the same wave brief blind; to adjudicate a split, give it the brief plus both positions. You still decide what to recommend.
+
+**2. Subagents, as much as possible.** The main window holds digests and decisions, nothing else; treat ~100K tokens as the ceiling. Code sweeps, doc and ADR reads, issue bodies, research, prototypes and the intake digests go to subagents that write payloads to disk and return short digests — each prompt opening by telling the subagent to invoke the `terse` skill. If the window is filling anyway, write state to disk and reset rather than push on.
+
+**3. Wayfinder structure** (wayfinder only). Shape the map the way it has worked before:
+
+- **One `wayfinder:map` issue**, every planning ticket a **native sub-issue** of it, and blocking edges as **native blocked-by links**. Labels `wayfinder:map`, `wayfinder:grilling` (HITL), `wayfinder:research` (AFK), `wayfinder:prototype` (HITL), `wayfinder:task` — give each a description saying what it's for.
+- **Map body:** `## Destination` / `## Notes` / `## Decisions so far` (one line per closed ticket: `[title](link): gist`) / `## Not yet specified` / `## Out of scope`. In `## Notes`, carry the terms used, the decisions settled before charting ("do not reopen these on a ticket"), and a **"How every ticket is worked"** section restating this protocol — the ticket directory is local-only, the map is what every ticket session reads.
+- **Ticket body:** `## Question` / `## What we already know` (each bullet ending with its source) / `## Done when` (a `- [ ]` checklist whose last item is the resolution comment). Don't edit planner positions or my rulings into the body afterwards — they go in the resolution comment, or body and comments end up disagreeing.
+- **One ticket, one session.** Work each ticket in its own fresh, narrowly scoped session; the granularity is what keeps each one out of the dumb zone. A **tie-together grilling ticket**, blocked by the decision tickets it depends on, synthesises their answers into the waves or follow-on maps.
+- **Waves:** a wave is one `/to-spec` → `/to-tickets` round turning part of the map into build tickets. Make every wave's spec a **native sub-issue of the map** too, so the map's progress counter tells the truth, and give its build tickets `## Parent` naming the spec and the map.
+- **Record a scope change once** — on the map's `## Decisions so far` — and link to it elsewhere, rather than restating it on three tickets. Refer to tickets by linked title. If a ticket cites an ADR that isn't pushed yet, say so.
+- **Close the map** when its destination is met, and close or update date-bound tickets once their date passes.
+
+**4. Closing a ticketed wayfinder session.** Before a ticket's session ends:
+
+1. **Post a resolution comment on its own issue:** `## Resolution` (one-paragraph gist), who decided and when, `### Answer` (numbered), `### Where the planners differed` (if both ran), `### Records` (ADRs, docs, commits — say if not yet pushed), `### Passed on` (tickets created, input for other tickets, anything not verified).
+2. **Update related tickets.** Comment on every open ticket this one answers, unblocks, or changes the context of — "Input from [title](link), now closed:" plus only what that ticket needs. Relevant information, not a broadcast.
+3. **Add the gist line** to the map's `## Decisions so far`.
+4. **Close its own issue** (`gh issue close <n> --reason completed`).
+
 ### 6a. Hand off — same session, all five reminders every time
 
 End with exactly these, in order:
 
 1. **`/compact` now.** Required, not optional. Intake's job is done and everything of substance is on disk; planning must start in a clean window. Do not let me walk into grilling on top of intake's leftovers.
-2. **Switch to Opus at `high` or `xhigh` effort** for planning — grilling, `/to-spec`, and `/to-tickets` all reward reasoning effort, because they work on under-determined problems. (Implementation later does not; `/pre-implement` handles that call.)
-3. **Which planning skill**, with a one-line why:
-   - **`/grill-with-docs`** — one coherent feature, bug, or spike that a single relentless interview can sharpen. **This is the common case; recommend it unless the ticket genuinely resists it.**
-   - **`/wayfinder`** — too big to hold in one session, or carrying enough unknowns that it needs a map of decision tickets resolved one at a time.
+2. **The next command**, for the planning path I chose in step 5: `/grill-with-docs`, `/wayfinder`, or — for neither — `/pre-implement <issue>` (after `/to-tickets` if there's no issue yet), then `/implement`.
+3. **Which model to plan on** (skip for neither — `/pre-implement` makes the model call) — planning rewards reasoning effort because it works on under-determined problems. (Implementation later does not; `/pre-implement` handles that call.)
+   - **Grilling** → Opus at `high` or `xhigh` is fine.
+   - **Wayfinder** → **Fable** — it's the long-horizon, long-context session that has to hold a map together across many tickets.
 4. **Standing reminders for that planning session**, carried forward because nothing downstream restates them:
    - **Write any missing ADRs before the next reset.** An ADR's value is the argument — the option rejected and why — and that's exactly what a reset destroys. Check `docs/adr/` on the filesystem for what already exists; write what's missing, matching the existing format.
    - **Keep the interview on the code and the acceptance criteria** — not commit hygiene, review process, or other delivery mechanics. Those belong to later skills.
    - **Don't produce logic code during planning.** That's `implement`'s job, after `to-tickets` has sliced the work.
+   - **If grilling or wayfinder:** write [the planning protocol](#the-planning-protocol) to `PLANNING-PROTOCOL.md` and tell me to have the planning session read it before its first wave. Say whether Gemini is available and, if so, which planner B the session will run.
    - **If GNHF:** restate [the GNHF planning requirements](#the-gnhf-planning-requirements) in full, and **also write them to `RUN-MODE.md`** in the ticket directory (first line: `mode: gnhf`), because a `/compact` summary is lossy and this is the one reminder that must reach `/to-spec` and `/to-tickets` intact. Tell me to have the planning session read it.
-5. **Rename this session** — it is about to carry both phases. Print the command with the real ticket id substituted so I can copy and paste it:
+5. **Rename this session** — it is about to carry both phases. Print the command with the real ticket id substituted so I can copy and paste it (`WAYFINDER` instead of `GRILLING` for a wayfinder session, `PLANNING` if neither):
 
    ```
    /rename ABC-123 [INTAKE + GRILLING]
@@ -125,7 +189,8 @@ Write a detailed `HANDOFF.md` into the ticket directory (`.ig.jira-tickets/<id>-
 
 - The brief from step 4 in full, not summarized further.
 - The free-text framing from the initiating prompt, called out explicitly.
-- Which planning skill to run and why (same criteria as 6a.3): `/grill-with-docs` for one coherent effort, `/wayfinder` when it's too big or too unknown for one session.
+- The planning path I chose in step 5 and why — grilling, wayfinder, or neither — with the next command and the model to plan on (6a.2–6a.3).
+- If grilling or wayfinder: a pointer to `PLANNING-PROTOCOL.md` (write it, per [the planning protocol](#the-planning-protocol)), whether Gemini is available, and which planner B the session will run.
 - Pointers to every digest on disk (`TICKET.md`, `FIGMA-NOTES.md`, `IMAGE-NOTES.md`, `NOTES-DIGEST.md`, `INITIAL-PROMPT.md`) — whichever exist — so the fresh session pulls detail on demand instead of re-fetching.
 - Open questions and gaps flagged during intake.
 - The same standing reminders as 6a.4 (ADRs, keep the interview on code/AC, don't produce logic code during planning), since nothing downstream restates them.
@@ -134,16 +199,17 @@ Write a detailed `HANDOFF.md` into the ticket directory (`.ig.jira-tickets/<id>-
 Then give me a **ready-to-paste prompt for the new session**. It must:
 
 - Point at the handoff document's path and tell the new session to read it first.
-- Name the planning skill to invoke (`/grill-with-docs` or `/wayfinder`) and the ticket id.
+- Name the next command (`/grill-with-docs`, `/wayfinder`, or for neither `/pre-implement` — after `/to-tickets` if there's no issue yet) and the ticket id, and say which model to open the new session on (Opus at `high`/`xhigh` for grilling, Fable for wayfinder).
+- If grilling or wayfinder: tell the new session to read `PLANNING-PROTOCOL.md` before its first wave, and to follow it — independent planners per wave, Codex when it judges a third view necessary, subagents for every bulk read, and (wayfinder) the map structure and close-out steps.
 - State the run mode. If GNHF, say the planning must be AFK-ready, that doc changes from grilling stay uncommitted (no commit or push to the base branch), and point at the handoff's GNHF section.
 - Surface any additional context, nuance, or clarification from *this* conversation that didn't make it into `HANDOFF.md` or the digests — anything said in passing, any ambiguity I should resolve up front, anything the new session would otherwise have to ask me to repeat.
 
-Finally, remind me to rename the **new** session once it opens, and print the command with the real ticket id substituted so I can copy and paste it:
+Finally, remind me to rename the **new** session once it opens, and print the command with the real ticket id substituted so I can copy and paste it (`WAYFINDER` instead of `GRILLING` for a wayfinder session, `PLANNING` if neither):
 
 ```
 /rename ABC-123 [GRILLING]
 ```
 
-This session keeps its `[INTAKE]` name — the grilling happens elsewhere.
+This session keeps its `[INTAKE]` name — the planning happens elsewhere.
 
 Then stop. Do not begin planning here, and do not `/compact` — this session's job ends with the handoff document and the prompt.

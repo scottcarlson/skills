@@ -27,10 +27,23 @@ would have silently drifted into describing behaviour that no longer exists.
 
 The lens is ours. The interview isn't.
 
+## Why a second planner proposes each round
+
+One model drafting refinement questions has one set of blind spots — it'll probe empty states
+thoroughly and never ask whether the ticket is really two. When Gemini 4 Neon is connected via `agy`,
+it drafts each round independently from the same brief, and the two lists are merged before you see
+them: agreement raises confidence in a recommended answer, divergence becomes a question worth
+asking. It runs blind — a planner that reads the other's draft first just agrees with it — and
+read-only, on an inline brief written to `$TMPDIR`, so the skill stays ephemeral. Codex is a third
+view only when a split actually matters. Without `agy`, the skill runs exactly as before.
+
+Linked context is fetched by subagents that return digests, for the same reason as `jira-intake`:
+a few Figma frames and a spike doc would otherwise spend the context the interview needs.
+
 ## Constraints it obeys
 
-**Purely ephemeral** — no local files. There's nothing worth caching about a ticket you're about to
-change.
+**Purely ephemeral** — no files in the repo; planner B's round briefs live in `$TMPDIR` and are
+deleted at the end. There's nothing worth caching about a ticket you're about to change.
 
 **Posts only on confirmation.** The output is a comment on a ticket the whole team reads. It drafts,
 shows the full text, and waits. It also splits what you answered from what the team still has to

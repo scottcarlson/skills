@@ -21,13 +21,23 @@ This skill has no local fallback — if the MCP is unreachable or the id isn't f
 
 ### 2. Pull in linked context (best-effort)
 
-Scan the description and comments for links and fetch what's behind them to sharpen your questions — a prior spike doc or a design gap surfaces much better refinement questions than the ticket text alone:
+Scan the description and comments for links and fetch what's behind them to sharpen your questions — a prior spike doc or a design gap surfaces much better refinement questions than the ticket text alone. Fetch through subagents, one per link, launched in a single message — each prompt opening by telling the subagent to invoke the `terse` skill and return a digest of what the source implies for refinement. Raw Figma frames, screenshots and long docs never enter your own context; you interview from digests.
 
 - **Figma** (`figma.com` links) → **Figma MCP**: `get_design_context`, `get_screenshot`, `get_metadata`.
 - **Notion** (`notion.so` links, e.g. a prior spike write-up) → **Notion MCP**: `notion-fetch` on the link (or `notion-search` if it isn't directly fetchable).
 - **Google Docs / Sheets / Drive** (`docs.google.com`, `sheets.google.com`, `drive.google.com` links, e.g. a Google Chat/Gemini summary doc) → **Google Drive MCP**: `get_file_metadata` then `read_file_content` or `download_file_content`.
 
 Best-effort only: if a link 404s or access is denied, note that in your own context and move on — don't let it block the interview.
+
+### 2b. Check for an independent second planner
+
+Check whether Gemini 4 Neon is connected:
+
+```
+command -v agy && agy models | grep -q '^gemini-4-neon-high'
+```
+
+If it isn't, say so in one line and run step 3 single-planner, exactly as before. If it is, Neon at high thinking is planner B for every round of step 3 — you are planner A.
 
 ### 3. Grill — refinement lens, not implementation
 
@@ -47,6 +57,23 @@ Keep questions scoped to **refinement**, not implementation — don't ask how so
 - If a linked spike/Notion doc exists — does the ticket still reflect its conclusions, or has something drifted?
 
 If the ticket is already solid and nothing substantive surfaces, say so plainly rather than manufacturing filler questions.
+
+**Two planners per round, when Neon is available.** This changes what goes *into* each round, not how `grilling` runs it. Before putting a round to me:
+
+1. Write a self-contained **round brief** to `$TMPDIR` (not the repo — this skill leaves no files behind): the ticket text, the step 2 digests, the refinement lens above, and what's been resolved or left open so far. Not your own draft questions.
+2. Draft planner A's round — questions and recommended answers — **before** reading planner B's.
+3. Run planner B blind, headless and read-only, with the brief inline, in a fresh call per round:
+
+   ```
+   agy -p "$(cat <round-brief>)" --model gemini-4-neon-high --mode plan --output-format json
+   ```
+
+   Open the brief with "Everything you need is in this prompt; do not run commands or read files." — in `--mode plan` its shell is denied, and pointing it at a file instead of inlining makes it stop without answering. Read the `response` field. Never pass `--dangerously-skip-permissions`. On error, one retry; then run that round single-planner and say so.
+4. **Merge, then ask.** Dedupe the two lists. A question only one planner raised goes in if it earns it under the lens. Where both recommend the same answer, say so; where they differ, show me both and which you'd take and why. Hold planner B to the refinement lens too — drop implementation questions it raises unless the ticket invites them.
+
+**Codex as a third view or tie-breaker** (`codex:codex-rescue`), only when you judge it worth it — the planners split on something that changes scope or acceptance criteria, or agree so readily you suspect a shared blind spot. Give it the round brief blind for a third view, or the brief plus both positions to adjudicate. You still decide what to put to me.
+
+Delete the round briefs when the session ends.
 
 ### 4. Route each answer
 
