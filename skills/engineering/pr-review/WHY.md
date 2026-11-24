@@ -15,16 +15,25 @@ findings and the code.
    and it catches a different class of thing.
 2. **An independent review**, done without deferring to Copilot's findings — reading them first would
    just anchor to them.
-3. **Codex peer-reviews the combined findings.** This is the load-bearing step. It's cheap to generate
-   a confident, wrong finding, and expensive to have one land in a teammate's PR. A second model
-   trying to refute each finding kills the plausible-but-wrong ones before they cost anyone time.
+3. **Codex and Gemini Neon peer-review the combined findings, blind to each other.** This is the
+   load-bearing step. It's cheap to generate a confident, wrong finding, and expensive to have one land
+   in a teammate's PR. A second model trying to refute each finding kills the plausible-but-wrong ones
+   before they cost anyone time; two, from two different vendors, means a finding has to survive two
+   unrelated sets of blind spots. Running them blind matters — a peer that reads the other's verdicts
+   anchors to them, and the second opinion collapses into the first.
 
 Only then does anything get implemented.
 
-**Fable is a fallback, not a peer.** If Codex is unreachable or out of credits, the `exhaustive-reasoner`
-subagent (Fable) stands in so the adversarial pass isn't silently skipped. It is deliberately gated to
-real unavailability: Codex is the reviewer of choice because it's a different model family, and
-swapping in a same-vendor reviewer whenever convenient would quietly erode that independence.
+**Gemini is additive and optional.** It runs only when `agy` is installed and Gemini 4 Neon is
+connected; without it the skill behaves exactly as it did with Codex alone. It's invoked inline and
+in `--mode plan` so it can't touch the worktree — it reviews a brief, not the repo.
+
+**Fable is a fallback, not a peer.** If no other-vendor peer could run — Codex unreachable or out of
+credits, and Gemini absent or failing — the `exhaustive-reasoner` subagent (Fable) stands in so the
+adversarial pass isn't silently skipped. It is deliberately gated to real unavailability: the peers are
+the reviewers of choice because they're different model families, and swapping in a same-vendor
+reviewer whenever convenient would quietly erode that independence. If Codex is out but Gemini ran,
+Gemini alone is enough — it's still cross-vendor.
 
 ## Why fixes land as a follow-up PR
 
